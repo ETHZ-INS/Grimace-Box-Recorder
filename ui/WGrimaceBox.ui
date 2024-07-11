@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WGrimaceBox</class>
+ <widget class="QMainWindow" name="WGrimaceBox">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1235</width>
+    <height>843</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Grimace Box</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QFrame" name="frame_2">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1">
+       <property name="sizeConstraint">
+        <enum>QLayout::SetMinimumSize</enum>
+       </property>
+       <item>
+        <widget class="QLabel" name="lbl_video_top">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>375</width>
+           <height>300</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>750</width>
+           <height>600</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">border: 2px solid black;</string>
+         </property>
+         <property name="text">
+          <string>Top camera not configured</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_video_front">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>375</width>
+           <height>300</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>750</width>
+           <height>600</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">border: 2px solid black;</string>
+         </property>
+         <property name="text">
+          <string>Front camera not configured</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="lbl_overview">
+      <property name="text">
+       <string>### Overview for next recording:  
+Recording Number: 1  
+Recording Duration: 00:10:00.000  
+Top Camera Frame Rate: 30.0 FPS  
+Front Camera Frame Rate: 30.0 FPS  
+Top Video Filename: top_1.avi  
+Front Video Filename: front_1.avi  
+</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::MarkdownText</enum>
+      </property>
+      <property name="wordWrap">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="verticalSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Expanding</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QFrame" name="frame">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>60</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>60</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QPushButton" name="btn_record">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Start Recording</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_message">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Ready to record</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_time">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>00:00:00</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1235</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="action_save_project"/>
+    <addaction name="action_save_project_as"/>
+    <addaction name="action_load_project"/>
+   </widget>
+   <widget class="QMenu" name="menuCamera">
+    <property name="title">
+     <string>Recording</string>
+    </property>
+    <widget class="QMenu" name="menu_configure_cameras">
+     <property name="title">
+      <string>Configure Cameras</string>
+     </property>
+     <addaction name="action_configure_top_camera"/>
+     <addaction name="action_configure_front_camera"/>
+    </widget>
+    <addaction name="menu_configure_cameras"/>
+    <addaction name="action_configure_recording"/>
+    <addaction name="action_configure_video_files"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionReport_Bug"/>
+    <addaction name="actionContact_Authors"/>
+   </widget>
+   <widget class="QMenu" name="menuAnalysis">
+    <property name="title">
+     <string>Analysis</string>
+    </property>
+    <addaction name="action_configure_grimace_scoring"/>
+    <addaction name="action_open_grimace_results_window"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuCamera"/>
+   <addaction name="menuAnalysis"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_save_project">
+   <property name="text">
+    <string>Save Project</string>
+   </property>
+  </action>
+  <action name="action_load_project">
+   <property name="text">
+    <string>Load Project</string>
+   </property>
+  </action>
+  <action name="actionConfigure_Video_Files">
+   <property name="text">
+    <string>Configure Video Files</string>
+   </property>
+  </action>
+  <action name="action_configure_recording">
+   <property name="text">
+    <string>Configure Recording</string>
+   </property>
+  </action>
+  <action name="action_configure_video_files">
+   <property name="text">
+    <string>Configure Video Files</string>
+   </property>
+  </action>
+  <action name="action_configure_top_camera">
+   <property name="text">
+    <string>Top Camera</string>
+   </property>
+  </action>
+  <action name="action_configure_front_camera">
+   <property name="text">
+    <string>Front Camera</string>
+   </property>
+  </action>
+  <action name="action_save_project_as">
+   <property name="text">
+    <string>Save Project As...</string>
+   </property>
+  </action>
+  <action name="actionConfigure_Frame_Extraction">
+   <property name="text">
+    <string>Configure Frame Extraction</string>
+   </property>
+  </action>
+  <action name="action_configure_grimace_scoring">
+   <property name="text">
+    <string>Configure Grimace Scoring</string>
+   </property>
+  </action>
+  <action name="actionReport_Bug">
+   <property name="text">
+    <string>Report Bug</string>
+   </property>
+  </action>
+  <action name="actionContact_Authors">
+   <property name="text">
+    <string>Contact Support</string>
+   </property>
+  </action>
+  <action name="action_open_grimace_results_window">
+   <property name="text">
+    <string>Open Grimace Results Window</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
