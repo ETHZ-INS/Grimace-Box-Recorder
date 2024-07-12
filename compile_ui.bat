@@ -1,14 +1,13 @@
 call conda activate GrimaceRecorder
 echo Compiling Main Window...
-pyside6-uic "layout/WGrimaceBox.ui" -o "app/ui/grimace_box.py"
+pyside6-uic "ui/WGrimaceBox.ui" -o "app/layout/grimace_box.py"
 echo Compiling Camera Configuration Dialog...
-pyside6-uic "layout/DConfigureCamera.ui" -o "app/ui/configure_camera_dialog.py"
+pyside6-uic "ui/DConfigureCamera.ui" -o "app/layout/configure_camera_dialog.py"
 echo Compiling Recording Configuration Dialog...
-pyside6-uic "layout/DConfigureRecording.ui" -o "app/ui/configure_recording_dialog.py"
+pyside6-uic "ui/DConfigureRecording.ui" -o "app/layout/configure_recording_dialog.py"
 echo Compiling File Configuration Dialog...
-pyside6-uic "layout/DConfigureVideoFiles.ui" -o "app/ui/configure_video_files_dialog.py"
+pyside6-uic "ui/DConfigureVideoFiles.ui" -o "app/layout/configure_video_files_dialog.py"
 echo Compiling Grimace Configuration Dialog...
-pyside6-uic "layout/DConfigureGrimaceScoring.ui" -o "app/ui/configure_grimace_scoring_dialog.py"
+pyside6-uic "ui/DConfigureGrimaceScoring.ui" -o "app/layout/configure_grimace_scoring_dialog.py"
 echo Compiling Grimace Results Window...
-pyside6-uic "layout/GGrimaceResults.ui" -o "app/ui/grimace_results_widget.py"
-PAUSE
+pyside6-uic "ui/GGrimaceResults.ui" -o "app/layout/grimace_results_widget.py"

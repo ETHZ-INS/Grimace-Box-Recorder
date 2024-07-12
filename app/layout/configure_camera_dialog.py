@@ -91,6 +91,9 @@ class Ui_DConfigureCamera(object):
 
         self.spb_fps = QDoubleSpinBox(self.frame)
         self.spb_fps.setObjectName(u"spb_fps")
+        self.spb_fps.setMinimum(4.000000000000000)
+        self.spb_fps.setMaximum(60.000000000000000)
+        self.spb_fps.setValue(30.000000000000000)
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.spb_fps)
 
@@ -131,6 +134,8 @@ class Ui_DConfigureCamera(object):
         self.label_3.setText(QCoreApplication.translate("DConfigureCamera", u"Config File:", None))
         self.lbl_selected_file.setText(QCoreApplication.translate("DConfigureCamera", u"No File Selected", None))
         self.btn_select_file.setText(QCoreApplication.translate("DConfigureCamera", u"...", None))
+        self.spb_fps.setPrefix("")
+        self.spb_fps.setSuffix("")
         self.label_2.setText(QCoreApplication.translate("DConfigureCamera", u"FPS:", None))
     # retranslateUi
 

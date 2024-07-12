@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 import math
 import os
@@ -5,7 +6,7 @@ import sys
 import time
 from dataclasses import replace
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import cv2
 import numpy as np
@@ -13,7 +14,7 @@ import torch
 from PySide6 import QtCore
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
-from PySide6.QtCore import Signal, QThread, QObject
+from PySide6.QtCore import Signal, QThread, QObject, QTimer
 from pypylon import pylon
 from ultralytics import YOLO
 
@@ -69,34 +70,24 @@ VideoBuffer = QQueue[Tuple[np.ndarray, int, float]]
 
 class RecordingManager(QObject):
     overview_changed = Signal()
+    warnings_changed = Signal()
     recording_started = Signal()
     recording_stopped = Signal()
     recording_error = Signal(str)
 
     def __init__(self):
         super().__init__()
-        self.camera_top_config = None
-        self.camera_front_config = None
-        self.recording_config = None
-        self.video_files_config = None
-        self.grimace_config = None
+        self.camera_top_config = CameraConfig()
+        self.camera_front_config = CameraConfig()
+        self.recording_config = RecordingConfig()
+        self.video_files_config = VideoFilesConfig()
+        self.grimace_config = GrimaceConfig()
 
         self.recording_number = 1
 
-        self.top_video_file = None
-        self.front_video_file = None
-        self.grimace_results_file = None
-
-        self.camera_top_fps = None
-        self.camera_front_fps = None
-
-        self.recording_mode = None
-        self.recording_duration = None
-        self.codec = None
-
-        self.grimace_enabled = None
-        self.grimace_model = None
-        self.frame_interval = None
+        self.top_video_file: Optional[str] = None
+        self.front_video_file: Optional[str] = None
+        self.grimace_results_file: Optional[str] = None
 
         self.frame_quality_scorer = None
         self.face_cropper = None
@@ -121,7 +112,12 @@ class RecordingManager(QObject):
 
         self.recording_running = False
 
+        self.health_timer = QTimer(self)
+        self.health_timer.timeout.connect(self.check_health)
+        self.health_timer.start(1000)
+
         self.error: Optional[str] = None
+        self.warnings: Dict[str, str] = {}
 
     def configure_video_files(self, video_files_config: Optional[VideoFilesConfig]):
         self.video_files_config = replace(video_files_config)
@@ -177,82 +173,50 @@ class RecordingManager(QObject):
         self.grimace_results_file = str(grimace_results_file)
 
         self.error = None
-
         self.overview_changed.emit()
 
     def configure_top_camera(self, camera_top_config: Optional[CameraConfig]):
-        self.camera_top_config = replace(camera_top_config)
-
-        if camera_top_config is None:
-            self.camera_top_fps = None
-        else:
-            self.camera_top_fps = camera_top_config.fps
-
+        self.camera_top_config = deepcopy(camera_top_config)
         self.error = None
-
         self.overview_changed.emit()
 
     def configure_front_camera(self, camera_front_config: Optional[CameraConfig]):
-        self.camera_front_config = replace(camera_front_config)
-
-        if camera_front_config is None:
-            self.camera_front_fps = None
-            self.overview_changed.emit()
-            return
-
-        self.camera_front_fps = camera_front_config.fps
-
+        self.camera_front_config = deepcopy(camera_front_config)
         self.error = None
-
         self.overview_changed.emit()
 
     def configure_recording(self, recording_config: RecordingConfig):
-        self.recording_config = replace(recording_config)
-
-        if recording_config is None:
-            self.recording_mode = None
-            self.recording_duration = None
-            self.codec = None
-            self.overview_changed.emit()
-            return
-
-        self.recording_mode = recording_config.mode
-        self.recording_duration = recording_config.duration if recording_config.mode == "Timed" else None
-        self.codec = recording_config.codec
-
+        self.recording_config = deepcopy(recording_config)
         self.error = None
-
         self.overview_changed.emit()
 
     def configure_grimace(self, grimace_config: GrimaceConfig):
-        self.grimace_config = replace(grimace_config)
+        self.grimace_config = deepcopy(grimace_config)
 
-        if grimace_config is None:
-            self.grimace_enabled = None
-            self.grimace_model = None
-            self.frame_interval = None
-            self.overview_changed.emit()
-            return
+        if grimace_config is not None and grimace_config.enabled:
+            if self.grimace_config.frame_quality_device is not None:
+                frame_quality_model = FrameQualityModel(device=grimace_config.frame_quality_device)
+                model_weigths = torch.load(Path("models/frame_quality.pt"), map_location=lambda storage, loc: storage)
+                frame_quality_model.load_state_dict(model_weigths)
+                self.frame_quality_scorer = FrameQualityScorer(frame_quality_model)
+            else:
+                self.frame_quality_scorer = None
 
-        self.grimace_enabled = grimace_config.enabled
-        self.grimace_model = grimace_config.grimace_model
-        self.frame_interval = grimace_config.frame_interval
+            if self.grimace_config.face_cropper_device is not None:
+                face_cropper_model_base = YOLO('models/face_cropper.pt')
+                face_cropper_model_base.to(grimace_config.face_cropper_device)
+                face_cropper_model = FrameCropperModel(face_cropper_model_base, device=grimace_config.face_cropper_device)
+                self.face_cropper = FrameCropper(face_cropper_model, padding=0.05, confidence_threshold=0.9)
+            else:
+                self.face_cropper = None
 
-        if grimace_config.enabled:
-            frame_quality_model = FrameQualityModel(device=grimace_config.frame_quality_device)
-            model_weigths = torch.load(Path("models/frame_quality.pt"), map_location=lambda storage, loc: storage)
-            frame_quality_model.load_state_dict(model_weigths)
-            self.frame_quality_scorer = FrameQualityScorer(frame_quality_model)
-
-            face_cropper_model_base = YOLO('models/face_cropper.pt')
-            face_cropper_model_base.to(grimace_config.face_cropper_device)
-            face_cropper_model = FrameCropperModel(face_cropper_model_base, device=grimace_config.face_cropper_device)
-            self.face_cropper = FrameCropper(face_cropper_model, padding=0.05, confidence_threshold=0.9)
-
-            grimace_scorer_model = GrimaceScoreModel(device=grimace_config.grimace_scoring_device)
-            model_weigths = torch.load(Path("models/grimace_scorer.pt"), map_location=lambda storage, loc: storage)
-            grimace_scorer_model.load_state_dict(model_weigths)
-            self.grimace_scorer = GrimaceScorer(grimace_scorer_model)
+            if self.grimace_config.grimace_scoring_device is not None:
+                grimace_scorer_model = GrimaceScoreModel(device=grimace_config.grimace_scoring_device)
+                model_weigths = torch.load(Path("models/grimace_scorer.pt"), map_location=lambda storage, loc: storage)
+                grimace_scorer_model.load_state_dict(model_weigths)
+                self.grimace_scorer = GrimaceScorer(grimace_scorer_model)
+            else:
+                self.grimace_scorer = None
         else:
             self.frame_quality_scorer = None
             self.face_cropper = None
@@ -262,7 +226,7 @@ class RecordingManager(QObject):
 
         self.overview_changed.emit()
 
-    def ready(self) -> Optional[str]:
+    def get_error(self) -> Optional[str]:
         if self.camera_top_config is None:
             return "Top camera not configured"
 
@@ -276,30 +240,39 @@ class RecordingManager(QObject):
             return "Video files not configured"
 
         if self.top_video_file is None or self.front_video_file is None:
-            return "Video files not configured"
+            return "Video files not properly configured"
 
-        if self.camera_top_fps is None or self.camera_front_fps is None:
-            return "Camera FPS not configured"
+        if self.camera_top_config.fps is None:
+            return "Top camera FPS not configured"
 
-        if self.recording_mode is None:
+        if self.camera_front_config.fps is None:
+            return "Front camera FPS not configured"
+
+        if self.recording_config.mode is None:
             return "Recording mode not configured"
 
-        if self.recording_duration is None and self.recording_mode == "Timed":
+        if self.recording_config.mode == "Timed" and self.recording_config.duration is None:
             return "Recording duration not configured"
 
-        if self.codec is None:
+        if self.recording_config.codec is None:
             return "Codec not configured"
 
-        if self.grimace_enabled is None:
+        if self.grimace_config.enabled is None:
             return "Grimace scoring not configured"
 
-        if self.grimace_enabled:
-            if self.grimace_model is None:
+        if self.grimace_config.enabled:
+            if self.grimace_config.grimace_model is None:
                 return "Grimace model not configured"
-            if self.frame_interval is None:
+            if self.grimace_config.frame_interval is None:
                 return "Frame interval not configured"
             if self.frame_quality_scorer is None:
                 return "Frame quality scorer not configured"
+            if self.grimace_config.frame_quality_device is None:
+                return "Frame quality device not configured"
+            if self.grimace_config.face_cropper_device is None:
+                return "Face cropper device not configured"
+            if self.grimace_config.grimace_scoring_device is None:
+                return "Grimace scoring device not configured"
             if self.face_cropper is None:
                 return "Face cropper not configured"
             if self.grimace_scorer is None:
@@ -307,19 +280,28 @@ class RecordingManager(QObject):
             if self.grimace_results_file is None:
                 return "Grimace results file not configured"
 
-        return None
+    def get_warnings(self) -> List[str]:
+        warnings = []
+        if self.camera_top_config is not None and self.camera_front_config is not None:
+            if self.camera_top_config.fps is not None and self.camera_front_config.fps is not None:
+                if self.camera_top_config.fps != self.camera_front_config.fps:
+                    warnings.append("Top and front camera FPS are different")
+        for key, value in self.warnings.items():
+            if value is not None:
+                warnings.append(value)
+        return warnings
 
     def prepare_recording(self, camera_recorder: PylonDualCameraRecorder):
         self.camera_recorder = camera_recorder
 
         self.configure_video_files(self.video_files_config)
 
-        fourcc = cv2.VideoWriter_fourcc(*self.codec)
+        fourcc = cv2.VideoWriter.fourcc(*self.recording_config.codec)
         top_video_writer = cv2.VideoWriter(
-            self.top_video_file, fourcc, self.camera_top_fps,
+            self.top_video_file, fourcc, self.camera_top_config.fps,
             (camera_recorder.top_camera.get_width(), camera_recorder.top_camera.get_height()), isColor=False)
         front_video_writer = cv2.VideoWriter(
-            self.front_video_file, fourcc, self.camera_front_fps,
+            self.front_video_file, fourcc, self.camera_front_config.fps,
             (camera_recorder.front_camera.get_width(), camera_recorder.front_camera.get_height()), isColor=False)
 
         self.top_video_buffer = QQueue(1000, "Top Video Buffer")
@@ -332,7 +314,7 @@ class RecordingManager(QObject):
             self.grimace_input_buffer = QQueue(1000, "Grimace Input Buffer")
             self.grimace_output_buffer = QQueue(1000, "Grimace Output Buffer")
 
-            frames_per_interval = int(self.frame_interval * self.camera_front_fps)
+            frames_per_interval = int(self.grimace_config.frame_interval * self.camera_front_config.fps)
 
             self.grimace_analyzer = GrimaceAnalyzerV1(self.frame_quality_scorer, self.face_cropper, self.grimace_scorer,
                                                       self.grimace_input_buffer, self.grimace_output_buffer,
@@ -343,10 +325,76 @@ class RecordingManager(QObject):
             self.grimace_results_writer = GrimaceResultWriter(Path(self.grimace_results_file),
                                                               self.grimace_output_buffer)
 
-        self.recording_context = RecordingContext(self.recording_duration if self.recording_mode == "Timed" else None)
+        recording_duration = self.recording_config.duration if self.recording_config.mode == "Timed" else None
+        self.recording_context = RecordingContext(recording_duration)
         self.recording_context.stop_signal.connect(self.stop_recording)
 
         self.overview_changed.emit()
+
+    def set_warning(self, key: str, value: str) -> bool:
+        prev_value = self.warnings.get(key)
+        if prev_value != value:
+            self.warnings[key] = value
+            return True
+        return False
+
+    def check_health(self):
+        warnings_changed = False
+        if self.camera_recorder is not None:
+            if self.camera_recorder.top_camera is not None:
+                warning = None
+                fill_level = self.camera_recorder.top_camera.buffer_fill_level
+                if fill_level > 0.1:
+                    warning = f"Top camera buffer fill level: {fill_level * 100:.2f}%"
+                warnings_changed |= self.set_warning("top_camera_buffer_fill", warning)
+
+                warning = None
+                fps = self.camera_recorder.top_camera.fps
+                if fps < self.camera_top_config.fps * 0.9:
+                    warning = f"Top camera FPS: {fps:.2f} (expected {self.camera_top_config.fps})"
+                warnings_changed |= self.set_warning("top_camera_fps", warning)
+
+            if self.camera_recorder.front_camera is not None:
+                warning = None
+                fill_level = self.camera_recorder.front_camera.buffer_fill_level
+                if fill_level > 0.1:
+                    warning = f"Front camera buffer fill level: {fill_level * 100:.2f}%"
+                warnings_changed |= self.set_warning("front_camera_buffer_fill", warning)
+
+                warning = None
+                fps = self.camera_recorder.front_camera.fps
+                if fps < self.camera_front_config.fps * 0.9:
+                    warning = f"Front camera FPS: {fps:.2f} (expected {self.camera_front_config.fps})"
+                warnings_changed |= self.set_warning("front_camera_fps", warning)
+
+        if self.top_video_buffer is not None:
+            warning = None
+            fill_level = self.top_video_buffer.get_fill_level()
+            if fill_level > 0.1:
+                warning = f"Top video buffer fill level: {fill_level * 100:.2f}%"
+            warnings_changed |= self.set_warning("top_video_buffer_fill", warning)
+        if self.front_video_buffer is not None:
+            warning = None
+            fill_level = self.front_video_buffer.get_fill_level()
+            if fill_level > 0.1:
+                warning = f"Front video buffer fill level: {fill_level * 100:.2f}%"
+            warnings_changed |= self.set_warning("front_video_buffer_fill", warning)
+
+        if self.grimace_input_buffer is not None:
+            warning = None
+            fill_level = self.grimace_input_buffer.get_fill_level()
+            if fill_level > 0.1:
+                warning = f"Grimace analysis buffer fill level: {fill_level * 100:.2f}%"
+            warnings_changed |= self.set_warning("grimace_input_buffer_fill", warning)
+        if self.grimace_output_buffer is not None:
+            warning = None
+            fill_level = self.grimace_output_buffer.get_fill_level()
+            if fill_level > 0.1:
+                warning = f"Grimace results buffer fill level: {fill_level * 100:.2f}%"
+            warnings_changed |= self.set_warning("grimace_output_buffer_fill", warning)
+
+        if warnings_changed:
+            self.warnings_changed.emit()
 
     def start_recording(self):
         self.error = None
@@ -372,15 +420,14 @@ class RecordingManager(QObject):
         if self.grimace_config.enabled:
             self.grimace_results_list.clear()
 
-        self.camera_recorder.start()
-        #self.recording_context.start()
-
         self.top_video_writer.start()
         self.front_video_writer.start()
 
         if self.grimace_config.enabled:
             self.grimace_analyzer.start()
             self.grimace_results_writer.start()
+
+        self.camera_recorder.start()
 
         self.overview_changed.emit()
         self.recording_started.emit()
@@ -446,14 +493,6 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         self.config_file = None
 
-        self.camera_top_config = CameraConfig()
-        self.camera_front_config = CameraConfig()
-
-        self.recording_config = RecordingConfig()
-        self.video_files_config = VideoFilesConfig()
-
-        self.grimace_config = GrimaceConfig()
-
         self.preview_buffer_top = QVariable()
         self.preview_buffer_top.value_set.connect(self.on_video_frame_top)
 
@@ -462,6 +501,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         self.recording_manager = RecordingManager()
         self.recording_manager.overview_changed.connect(self.overview_changed)
+        self.recording_manager.warnings_changed.connect(self.warnings_changed)
         self.recording_manager.recording_started.connect(self.recording_started)
         self.recording_manager.recording_stopped.connect(self.recording_stopped)
 
@@ -528,21 +568,34 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def update_video_label_size(self):
         label_width = self.lbl_video_top.width()
 
-        video_top_width = self.camera_recorder.top_camera.get_width() if self.camera_recorder.top_camera is not None else 375
-        video_top_height = self.camera_recorder.top_camera.get_height() if self.camera_recorder.top_camera is not None else 300
-        video_top_aspect_ratio = video_top_width / video_top_height
-        video_top_height = math.ceil(label_width / video_top_aspect_ratio)
+        def calculate_size(camera_recorder) -> Tuple[int, int]:
+            width = camera_recorder.get_width() if camera_recorder is not None else 375
+            height = camera_recorder.get_height() if camera_recorder is not None else 300
+            aspect_ratio = width / height
+            height = math.ceil(label_width / aspect_ratio)
+            return width, height
 
-        video_front_width = self.camera_recorder.front_camera.get_width() if self.camera_recorder.front_camera is not None else 375
-        video_front_height = self.camera_recorder.front_camera.get_height() if self.camera_recorder.front_camera is not None else 300
-        video_front_aspect_ratio = video_front_width / video_front_height
-        video_front_height = math.ceil(label_width / video_front_aspect_ratio)
-
+        video_top_width, video_top_height = calculate_size(self.camera_recorder.top_camera)
+        video_front_width, video_front_height = calculate_size(self.camera_recorder.front_camera)
         max_height = max(video_top_height, video_front_height)
+
         self.lbl_video_front.setMinimumSize(375, max_height)
         self.lbl_video_top.setMinimumSize(375, max_height)
         self.lbl_video_front.setMaximumSize(750, max_height)
         self.lbl_video_top.setMaximumSize(750, max_height)
+
+    def process_frame(self, frame: np.ndarray, width: int, height: int) -> QPixmap:
+        h, w, ch = frame.shape
+        bytes_per_line = ch * w
+        if ch == 1:
+            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_Grayscale8)
+        else:
+            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+        frame = QPixmap.fromImage(q_img)
+
+        frame = frame.scaled(width, height, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+
+        return frame
 
     def on_video_frame_top(self):
         frame = self.preview_buffer_top.get()
@@ -550,23 +603,17 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         video_label_width = self.lbl_video_top.width()
         video_label_height = self.lbl_video_top.height()
 
-        h, w, ch = frame.shape
-        bytes_per_line = ch * w
-        if ch == 1:
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_Grayscale8)
-        else:
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-        frame = QPixmap.fromImage(q_img)
-
-        frame = frame.scaled(video_label_width, video_label_height, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        frame = self.process_frame(frame, video_label_width, video_label_height)
 
         self.lbl_video_top.setPixmap(frame)
 
     def on_video_frame_front(self):
         if self.recording_manager.recording_context:
-            recording_time = self.recording_manager.recording_context.recording_time() if self.recording_manager.recording_context.started else 0.0
-            recording_time_string = str(
-                timedelta(seconds=recording_time)) if recording_time is not None else "Not Recording"
+            recording_time = 0.0
+            if self.recording_manager.recording_context.started:
+                recording_time = self.recording_manager.recording_context.recording_time()
+
+            recording_time_string = str(timedelta(seconds=recording_time))
             self.lbl_time.setText(recording_time_string)
 
         frame = self.preview_buffer_front.get()
@@ -574,60 +621,50 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         video_label_width = self.lbl_video_front.width()
         video_label_height = self.lbl_video_front.height()
 
-        h, w, ch = frame.shape
-        bytes_per_line = ch * w
-        if ch == 1:
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_Grayscale8)
-        else:
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-        frame = QPixmap.fromImage(q_img)
-
-        frame = frame.scaled(video_label_width, video_label_height, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        frame = self.process_frame(frame, video_label_width, video_label_height)
 
         self.lbl_video_front.setPixmap(frame)
 
     def setup_top_camera(self, camera_config: CameraConfig, start: bool = True):
-        self.camera_top_config = camera_config
-
         if camera_config.camera_id is None:
             self.update_video_label_size()
             self.lbl_video_top.clear()
             self.lbl_video_top.setText("Top camera not configured")
-            return
+        else:
+            self.camera_recorder.set_top_camera(
+                camera_config.camera_id, fps=camera_config.fps,
+                config_file=camera_config.config_file, start=start
+            )
+            self.camera_recorder.top_camera.set_preview_buffer(self.preview_buffer_top)
 
-        self.camera_recorder.set_top_camera(
-            camera_config.camera_id, fps=camera_config.fps,
-            config_file=camera_config.config_file, start=start
-        )
-        self.camera_recorder.top_camera.set_preview_buffer(self.preview_buffer_top)
-
-        self.update_video_label_size()
+            self.update_video_label_size()
 
         self.recording_manager.configure_top_camera(camera_config)
 
     def setup_front_camera(self, camera_config: CameraConfig, start: bool = True):
-        self.camera_front_config = camera_config
-
         if camera_config.camera_id is None:
             self.update_video_label_size()
             self.lbl_video_front.clear()
             self.lbl_video_front.setText("Front camera not configured")
-            return
+        else:
+            self.camera_recorder.set_front_camera(
+                camera_config.camera_id, fps=camera_config.fps,
+                config_file=camera_config.config_file, start=start
+            )
+            self.camera_recorder.front_camera.set_preview_buffer(self.preview_buffer_front)
 
-        self.camera_recorder.set_front_camera(
-            camera_config.camera_id, fps=camera_config.fps,
-            config_file=camera_config.config_file, start=start
-        )
-        self.camera_recorder.front_camera.set_preview_buffer(self.preview_buffer_front)
-
-        self.update_video_label_size()
+            self.update_video_label_size()
 
         self.recording_manager.configure_front_camera(camera_config)
 
     def configure_top_camera(self):
         available_cameras = self.get_available_cameras()
 
-        dlg = ConfigureCamera(self, self.camera_top_config, available_cameras)
+        if self.recording_manager.camera_front_config is not None:
+            if self.recording_manager.camera_front_config.camera_id is not None:
+                available_cameras.remove(self.recording_manager.camera_front_config.camera_id)
+
+        dlg = ConfigureCamera(self, self.recording_manager.camera_top_config, available_cameras)
         dlg.lbl_title.setText("Configure Top Camera")
         dlg.setWindowTitle("Configure Top Camera")
         dlg.applied_signal.connect(self.setup_top_camera)
@@ -636,7 +673,11 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def configure_front_camera(self):
         available_cameras = self.get_available_cameras()
 
-        dlg = ConfigureCamera(self, self.camera_front_config, available_cameras)
+        if self.recording_manager.camera_top_config is not None:
+            if self.recording_manager.camera_top_config.camera_id is not None:
+                available_cameras.remove(self.recording_manager.camera_top_config.camera_id)
+
+        dlg = ConfigureCamera(self, self.recording_manager.camera_front_config, available_cameras)
         dlg.lbl_title.setText("Configure Front Camera")
         dlg.setWindowTitle("Configure Front Camera")
         dlg.applied_signal.connect(self.setup_front_camera)
@@ -645,42 +686,41 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def on_top_camera_error(self, error: str):
         if self.recording_manager.recording_running:
             self.recording_manager.stop_recording(error)
-        self.camera_top_config.camera_id = None
-        self.setup_top_camera(self.camera_top_config, start=False)
+        camera_top_config = deepcopy(self.recording_manager.camera_top_config)
+        camera_top_config.camera_id = None
+        self.setup_top_camera(camera_top_config, start=False)
         self.lbl_video_top.setText(error)
 
     def on_front_camera_error(self, error: str):
         if self.recording_manager.recording_running:
             self.recording_manager.stop_recording(error)
-        self.camera_front_config.camera_id = None
-        self.setup_front_camera(self.camera_front_config, start=False)
+        camera_front_config = deepcopy(self.recording_manager.camera_front_config)
+        camera_front_config.camera_id = None
+        self.setup_front_camera(camera_front_config, start=False)
         self.lbl_video_front.setText(error)
 
     def recording_config_changed(self, recording_config: RecordingConfig):
-        self.recording_config = recording_config
         self.recording_manager.configure_recording(recording_config)
 
     def configure_recording(self):
-        dlg = ConfigureRecording(self, self.recording_config)
+        dlg = ConfigureRecording(self, self.recording_manager.recording_config)
         dlg.applied_signal.connect(self.recording_config_changed)
         dlg.exec()
 
     def video_files_config_changed(self, video_files_config: VideoFilesConfig):
-        self.video_files_config = video_files_config
         self.recording_manager.configure_video_files(video_files_config)
 
     def configure_video_files(self):
-        dlg = ConfigureVideoFiles(self, self.video_files_config)
+        dlg = ConfigureVideoFiles(self, self.recording_manager.video_files_config)
         dlg.applied_signal.connect(self.video_files_config_changed)
         dlg.exec()
 
     def grimace_config_changed(self, grimace_config):
-        self.grimace_config = grimace_config
         self.recording_manager.configure_grimace(grimace_config)
 
     def configure_grimace_scoring(self):
         available_devices = self.get_available_devices()
-        dlg = ConfigureGrimaceScoring(self, self.grimace_config, available_devices)
+        dlg = ConfigureGrimaceScoring(self, self.recording_manager.grimace_config, available_devices)
         dlg.applied_signal.connect(self.grimace_config_changed)
         dlg.exec()
 
@@ -694,13 +734,13 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         else:
             recording_number = str(recording_number)
 
-        recording_mode = self.recording_manager.recording_mode
+        recording_mode = self.recording_manager.recording_config.mode
         if recording_mode is None:
             recording_duration = "Not configured"
         elif recording_mode == "Manual":
             recording_duration = "Manual"
         elif recording_mode == "Timed":
-            recording_duration = self.recording_manager.recording_duration
+            recording_duration = self.recording_manager.recording_config.duration
             if recording_duration is not None:
                 recording_duration = str(timedelta(seconds=recording_duration))
             else:
@@ -708,13 +748,13 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         else:
             recording_duration = "Not Configured"
 
-        top_camera_fps = self.recording_manager.camera_top_fps
+        top_camera_fps = self.recording_manager.camera_top_config.fps
         if top_camera_fps is None:
             top_camera_fps = "Not configured"
         else:
             top_camera_fps = str(top_camera_fps) + " FPS"
 
-        front_camera_fps = self.recording_manager.camera_front_fps
+        front_camera_fps = self.recording_manager.camera_front_config.fps
         if front_camera_fps is None:
             front_camera_fps = "Not configured"
         else:
@@ -790,7 +830,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.btn_record.setEnabled(True)
             self.btn_record.setText("Start Recording")
 
-        message = self.recording_manager.ready()
+        message = self.recording_manager.get_error()
         if message is not None:
             self.btn_record.setEnabled(False)
             self.lbl_message.setText("Not ready: " + message)
@@ -805,6 +845,17 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.lbl_message.setText("Ready to record")
             self.lbl_message.setStyleSheet("color: green")
 
+        self.warnings_changed()
+
+    def warnings_changed(self):
+        warnings = self.recording_manager.get_warnings()
+        if warnings:
+            warning_title = "## Warnings:  \n"
+            warning_text = warning_title + ("  \n".join(warnings))
+            self.lbl_warnings.setText(warning_text)
+        else:
+            self.lbl_warnings.setText("")
+
     def open_grimace_results_window(self):
         if self.grimace_results_window is not None and self.grimace_results_window.isVisible():
             return
@@ -816,7 +867,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.grimace_results_window.show()
 
     def recording_started(self):
-        if self.grimace_config.enabled:
+        if self.recording_manager.grimace_config.enabled:
             self.open_grimace_results_window()
         self.update_menubar()
         self.update_recording_button()
@@ -830,16 +881,16 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.recording_manager.start_recording()
 
     def stop_recording(self):
-        if self.recording_manager.recording_mode == "Timed":
-            msgBox = QMessageBox(parent=self)
-            msgBox.setWindowTitle("Confirm")
-            msgBox.setText(
-                "The recording is configured to stop automatically after a certain duration. Do you want to stop it now?")
-            msgBox.setIcon(QMessageBox.Icon.Question)
-            msgBox.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msgBox.exec()
+        if self.recording_manager.recording_config.mode == "Timed":
+            msg = QMessageBox(parent=self)
+            msg.setWindowTitle("Confirm")
+            msg.setText("The recording is configured to stop automatically after a certain duration. "
+                        "Do you want to stop it now?")
+            msg.setIcon(QMessageBox.Icon.Question)
+            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg.exec()
 
-            if msgBox.result() == QMessageBox.StandardButton.No:
+            if msg.result() == QMessageBox.StandardButton.No:
                 return
 
         self.recording_manager.stop_recording()
@@ -859,29 +910,34 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def save_project(self):
         if self.config_file is None:
             return self.save_project_as()
-        ConfigLoader.save(Path(self.config_file), self.camera_top_config, self.camera_front_config,
-                          self.recording_config, self.video_files_config, self.grimace_config)
+        camera_top_config = self.recording_manager.camera_top_config
+        camera_front_config = self.recording_manager.camera_front_config
+        recording_config = self.recording_manager.recording_config
+        video_files_config = self.recording_manager.video_files_config
+        grimace_config = self.recording_manager.grimace_config
+        ConfigLoader.save(Path(self.config_file), camera_top_config, camera_front_config,
+                          recording_config, video_files_config, grimace_config)
 
     def save_project_as(self):
         if self.config_file is None:
-            selected_file = str(Path.home() / "project.gbp")
+            selected_file = str(Path.home() / "project.gb")
         else:
             selected_file = self.config_file
 
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Project", selected_file,
-                                                   "Grimace Box Project Files (*.gbp)")
+                                                   "Grimace Box Project Files (*.gb)")
         if file_name:
             self.config_file = file_name
             self.save_project()
 
     def load_project(self):
         if self.recording_manager.recording_running:
-            msgBox = QMessageBox(parent=self)
-            msgBox.setWindowTitle("Error")
-            msgBox.setText(
-                "Cannot load project while recording is running. Stop the recording or wait for it to finish.")
-            msgBox.setIcon(QMessageBox.Icon.Critical)
-            msgBox.exec_()
+            msg = QMessageBox(parent=self)
+            msg.setWindowTitle("Error")
+            msg.setText("Cannot load project while recording is running. "
+                        "Stop the recording or wait for it to finish.")
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.exec_()
             return
 
         if self.config_file is not None:
@@ -890,28 +946,28 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             selected_file = str(Path.home())
 
         selected_file, _ = QFileDialog.getOpenFileName(self, "Open Project", selected_file,
-                                                       "Grimace Box Project Files (*.gbp)")
+                                                       "Grimace Box Project Files (*.gb)")
         if selected_file:
             self.config_file = selected_file
-            self.camera_top_config, self.camera_front_config, self.recording_config, self.video_files_config, self.grimace_config = \
+            camera_top_config, camera_front_config, recording_config, video_files_config, grimace_config = \
                 ConfigLoader.load(Path(self.config_file))
 
             # Only start the camera thread once both cameras are configured
             try:
-                self.setup_top_camera(self.camera_top_config, start=False)
+                self.setup_top_camera(camera_top_config, start=False)
             except Exception as e:
                 self.on_top_camera_error(str(e))
 
             try:
-                self.setup_front_camera(self.camera_front_config, start=True)
+                self.setup_front_camera(camera_front_config, start=True)
             except Exception as e:
                 self.on_front_camera_error(str(e))
                 if self.camera_recorder.top_camera is not None:
                     self.camera_recorder.start()
 
-            self.recording_config_changed(self.recording_config)
-            self.video_files_config_changed(self.video_files_config)
-            self.grimace_config_changed(self.grimace_config)
+            self.recording_config_changed(recording_config)
+            self.video_files_config_changed(video_files_config)
+            self.grimace_config_changed(grimace_config)
 
 
 if __name__ == "__main__":

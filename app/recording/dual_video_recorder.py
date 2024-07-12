@@ -32,6 +32,7 @@ class PylonDualCameraRecorder(QThread):
             self.grimace_buffer: Optional[QQueue] = None
 
             self.timestamp_history = [0] * 10
+            self.fps = 0.0
 
             self.last_frame_number: Optional[int] = None
             self.frame_index = 0
@@ -163,9 +164,7 @@ class PylonDualCameraRecorder(QThread):
         camera.timestamp_history[camera.frame_index % 10] = timestamp
 
         fps = 10 / elapsed
-
-        if fps < camera.fps - 0.1:
-            print(f"Low FPS for camera {camera.camera.GetDeviceInfo().GetSerialNumber()}: {fps}")
+        camera.fps = fps
 
         video_buffer = camera.video_buffer
         if video_buffer is not None:
@@ -183,9 +182,6 @@ class PylonDualCameraRecorder(QThread):
 
         num_buffered_frames = camera.camera.NumReadyBuffers.GetValue()
         camera.buffer_fill_level = num_buffered_frames / 1000
-
-        if camera.frame_index % 30 == 0 and num_buffered_frames > 5:
-            print(f"Buffer fill level for camera {camera.camera.GetDeviceInfo().GetSerialNumber()}: {num_buffered_frames}")
 
         camera.frame_index += 1
 

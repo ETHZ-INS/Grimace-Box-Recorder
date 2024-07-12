@@ -59,6 +59,12 @@
            <height>600</height>
           </size>
          </property>
+         <property name="toolTip">
+          <string/>
+         </property>
+         <property name="statusTip">
+          <string/>
+         </property>
          <property name="styleSheet">
           <string notr="true">border: 2px solid black;</string>
          </property>
@@ -105,9 +111,18 @@
      </widget>
     </item>
     <item>
-     <widget class="QLabel" name="lbl_overview">
-      <property name="text">
-       <string>### Overview for next recording:  
+     <widget class="QFrame" name="frame_3">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QLabel" name="lbl_overview">
+         <property name="text">
+          <string>### Overview for next recording:  
 Recording Number: 1  
 Recording Duration: 00:10:00.000  
 Top Camera Frame Rate: 30.0 FPS  
@@ -115,30 +130,36 @@ Front Camera Frame Rate: 30.0 FPS
 Top Video Filename: top_1.avi  
 Front Video Filename: front_1.avi  
 </string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::MarkdownText</enum>
-      </property>
-      <property name="wordWrap">
-       <bool>false</bool>
-      </property>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::MarkdownText</enum>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <property name="wordWrap">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_warnings">
+         <property name="styleSheet">
+          <string notr="true">color: orange</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::MarkdownText</enum>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
-    </item>
-    <item>
-     <spacer name="verticalSpacer">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="sizeType">
-       <enum>QSizePolicy::Expanding</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>0</width>
-        <height>0</height>
-       </size>
-      </property>
-     </spacer>
     </item>
     <item>
      <widget class="QFrame" name="frame">
@@ -183,6 +204,9 @@ Front Video Filename: front_1.avi
            <width>0</width>
            <height>0</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string/>
          </property>
          <property name="text">
           <string>Start Recording</string>
@@ -232,24 +256,48 @@ Front Video Filename: front_1.avi
      <x>0</x>
      <y>0</y>
      <width>1235</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
+    <property name="toolTip">
+     <string>Test</string>
+    </property>
     <property name="title">
      <string>File</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="action_save_project"/>
     <addaction name="action_save_project_as"/>
     <addaction name="action_load_project"/>
    </widget>
-   <widget class="QMenu" name="menuCamera">
+   <widget class="QMenu" name="menuRecording">
+    <property name="toolTip">
+     <string>Change recording settings including cameras, recording length and filenames</string>
+    </property>
     <property name="title">
      <string>Recording</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <widget class="QMenu" name="menu_configure_cameras">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>2</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Select camera devices and change camera settings</string>
+     </property>
      <property name="title">
       <string>Configure Cameras</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
      </property>
      <addaction name="action_configure_top_camera"/>
      <addaction name="action_configure_front_camera"/>
@@ -262,18 +310,24 @@ Front Video Filename: front_1.avi
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionReport_Bug"/>
-    <addaction name="actionContact_Authors"/>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
+    <addaction name="action_report_bug"/>
+    <addaction name="action_contact_support"/>
    </widget>
    <widget class="QMenu" name="menuAnalysis">
     <property name="title">
      <string>Analysis</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="action_configure_grimace_scoring"/>
     <addaction name="action_open_grimace_results_window"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuCamera"/>
+   <addaction name="menuRecording"/>
    <addaction name="menuAnalysis"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -282,10 +336,16 @@ Front Video Filename: front_1.avi
    <property name="text">
     <string>Save Project</string>
    </property>
+   <property name="toolTip">
+    <string>Save project configuration (cameras, settings, etc.) to a file for later use</string>
+   </property>
   </action>
   <action name="action_load_project">
    <property name="text">
     <string>Load Project</string>
+   </property>
+   <property name="toolTip">
+    <string>Load project configuration (cameras, settings, etc.) from a file</string>
    </property>
   </action>
   <action name="actionConfigure_Video_Files">
@@ -297,25 +357,49 @@ Front Video Filename: front_1.avi
    <property name="text">
     <string>Configure Recording</string>
    </property>
+   <property name="toolTip">
+    <string>Configure the recording settings including the recording duration and video encoding</string>
+   </property>
+   <property name="statusTip">
+    <string/>
+   </property>
   </action>
   <action name="action_configure_video_files">
    <property name="text">
-    <string>Configure Video Files</string>
+    <string>Configure Files</string>
+   </property>
+   <property name="iconText">
+    <string>Configure Files</string>
+   </property>
+   <property name="toolTip">
+    <string>Change where the recorded videos and results of the grimace analysis are saved</string>
+   </property>
+   <property name="statusTip">
+    <string/>
    </property>
   </action>
   <action name="action_configure_top_camera">
    <property name="text">
     <string>Top Camera</string>
    </property>
+   <property name="toolTip">
+    <string>Select device to use as the top camera and change camera settings</string>
+   </property>
   </action>
   <action name="action_configure_front_camera">
    <property name="text">
     <string>Front Camera</string>
    </property>
+   <property name="toolTip">
+    <string>Select device to use as the front camera and change camera settings</string>
+   </property>
   </action>
   <action name="action_save_project_as">
    <property name="text">
     <string>Save Project As...</string>
+   </property>
+   <property name="toolTip">
+    <string>Save project configuration (cameras, settings, etc.) to a file for later use</string>
    </property>
   </action>
   <action name="actionConfigure_Frame_Extraction">
@@ -325,15 +409,18 @@ Front Video Filename: front_1.avi
   </action>
   <action name="action_configure_grimace_scoring">
    <property name="text">
-    <string>Configure Grimace Scoring</string>
+    <string>Configure Grimace Analysis</string>
+   </property>
+   <property name="toolTip">
+    <string>Change grimace analysis settings like the model version and frame sample interval</string>
    </property>
   </action>
-  <action name="actionReport_Bug">
+  <action name="action_report_bug">
    <property name="text">
     <string>Report Bug</string>
    </property>
   </action>
-  <action name="actionContact_Authors">
+  <action name="action_contact_support">
    <property name="text">
     <string>Contact Support</string>
    </property>
@@ -341,6 +428,9 @@ Front Video Filename: front_1.avi
   <action name="action_open_grimace_results_window">
    <property name="text">
     <string>Open Grimace Results Window</string>
+   </property>
+   <property name="toolTip">
+    <string>Open the grimace results window again if you have (accidentally) closed it</string>
    </property>
   </action>
  </widget>
