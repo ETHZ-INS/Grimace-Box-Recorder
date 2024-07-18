@@ -116,28 +116,32 @@ class PylonDualCameraRecorder(QThread):
 
         self.running = False
 
-    def set_top_camera(self, camera: Union[pylon.InstantCamera, str], fps: float = 30.0, config_file: Path = None, start: bool = True):
+    def set_top_camera(self, camera: Optional[Union[pylon.InstantCamera, str]], fps: float = 30.0, config_file: Path = None, start: bool = True):
         if self.running:
             self.stop()
             self.wait()
 
         if self.top_camera is not None:
             self.top_camera.camera.Close()
+            self.top_camera = None
 
-        self.top_camera = PylonDualCameraRecorder.Camera(camera, fps, config_file)
+        if camera is not None:
+            self.top_camera = PylonDualCameraRecorder.Camera(camera, fps, config_file)
 
         if start:
             self.start()
 
-    def set_front_camera(self, camera: Union[pylon.InstantCamera, str], fps: float = 30.0, config_file: Path = None, start: bool = True):
+    def set_front_camera(self, camera: Optional[Union[pylon.InstantCamera, str]], fps: float = 30.0, config_file: Path = None, start: bool = True):
         if self.running:
             self.stop()
             self.wait()
 
         if self.front_camera is not None:
             self.front_camera.camera.Close()
+            self.front_camera = None
 
-        self.front_camera = PylonDualCameraRecorder.Camera(camera, fps, config_file)
+        if camera is not None:
+            self.front_camera = PylonDualCameraRecorder.Camera(camera, fps, config_file)
 
         if start:
             self.start()
@@ -236,7 +240,7 @@ class PylonDualCameraRecorder(QThread):
             top_camera.reset_frame_index()
         if front_camera is not None:
             front_camera.last_frame_number = 0
-            top_camera.reset_frame_index()
+            front_camera.reset_frame_index()
 
         if top_camera is not None:
             try:

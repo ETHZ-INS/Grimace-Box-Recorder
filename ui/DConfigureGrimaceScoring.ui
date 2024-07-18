@@ -79,7 +79,7 @@
        <widget class="QComboBox" name="dpd_grimace_model">
         <item>
          <property name="text">
-          <string>V1.0 - Donkey</string>
+          <string>V1 - SuperScorer</string>
          </property>
         </item>
        </widget>
@@ -133,7 +133,11 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QComboBox" name="dpd_frame_quality_device"/>
+       <widget class="QComboBox" name="dpd_frame_quality_device">
+        <property name="toolTip">
+         <string>Select which device should be used to run the frame quality model</string>
+        </property>
+       </widget>
       </item>
       <item row="6" column="0">
        <widget class="QLabel" name="label_6">
@@ -150,10 +154,18 @@
        </widget>
       </item>
       <item row="6" column="1">
-       <widget class="QComboBox" name="dpd_face_cropper_device"/>
+       <widget class="QComboBox" name="dpd_face_cropper_device">
+        <property name="toolTip">
+         <string>Select which device should be used to run the frame cropper model</string>
+        </property>
+       </widget>
       </item>
       <item row="7" column="1">
-       <widget class="QComboBox" name="dpd_grimace_scoring_device"/>
+       <widget class="QComboBox" name="dpd_grimace_scoring_device">
+        <property name="toolTip">
+         <string>Select which device should be used to run the grimace scoring model</string>
+        </property>
+       </widget>
       </item>
       <item row="4" column="0">
        <widget class="QLabel" name="label_5">

@@ -59,9 +59,11 @@ class GrimaceAnalyzerV1(QThread):
         self.running_interval_scores = self.running_interval_scores[interval_size:]
 
         while True:
+            # Try to crop the frame with the highest score until a frame can be cropped
             max_score = max(interval_scores)
 
             if max_score < self.min_score:
+                self.output_list.append((None, None))
                 break
 
             max_score_index = np.argmax(interval_scores)
@@ -70,6 +72,7 @@ class GrimaceAnalyzerV1(QThread):
 
             cropped_frame = self.frame_cropper.crop(frame)
             if cropped_frame is None:
+                # If the frame could not be cropped, set the score to -1 to prevent it from being selected again
                 interval_scores[max_score_index] = -1
             else:
                 grimace_scores = self.grimace_scorer.score(cropped_frame)
@@ -77,6 +80,7 @@ class GrimaceAnalyzerV1(QThread):
                 self.output_list.append((cropped_frame, grimace_scores))
                 self.output_buffer.enqueue((frame_index, timestamp, grimace_scores))
                 break
+
 
     def run(self):
         self.running = True

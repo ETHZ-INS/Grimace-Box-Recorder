@@ -31,6 +31,9 @@
   <property name="windowTitle">
    <string>Configure Recording</string>
   </property>
+  <property name="modal">
+   <bool>false</bool>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="sizeConstraint">
     <enum>QLayout::SetMinAndMaxSize</enum>
@@ -81,7 +84,7 @@
       <item row="1" column="0">
        <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Time:</string>
+         <string>Duration:</string>
         </property>
        </widget>
       </item>
@@ -111,6 +114,9 @@
       </item>
       <item row="2" column="1">
        <widget class="QComboBox" name="dpd_codec">
+        <property name="toolTip">
+         <string>Select which video codec should be used to encode the recorded videos</string>
+        </property>
         <item>
          <property name="text">
           <string>FMP4</string>

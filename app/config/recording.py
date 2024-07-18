@@ -7,3 +7,6 @@ class RecordingConfig:
     mode: Optional[str] = "Manual"
     duration: float = 600.0
     codec: str = "FMP4"
+
+    MODES = ["Manual", "Timed"]
+    CODECS = ["FMP4", "MP4V", "FFV1"]

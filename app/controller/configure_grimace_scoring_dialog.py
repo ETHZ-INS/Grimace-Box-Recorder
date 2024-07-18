@@ -77,8 +77,16 @@ class ConfigureGrimaceScoring(Ui_DConfigureGrimaceScoring, QDialog):
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
 
+        self.enable_grimace_changed()
+
     def enable_grimace_changed(self):
         self.grimace_config.enabled = self.chb_enable_grimace.isChecked()
+
+        self.dpd_grimace_model.setEnabled(self.grimace_config.enabled)
+        self.dpd_frame_interval.setEnabled(self.grimace_config.enabled)
+        self.dpd_frame_quality_device.setEnabled(self.grimace_config.enabled)
+        self.dpd_face_cropper_device.setEnabled(self.grimace_config.enabled)
+        self.dpd_grimace_scoring_device.setEnabled(self.grimace_config.enabled)
 
     def grimace_model_changed(self):
         self.grimace_config.grimace_model = self.dpd_grimace_model.currentText()

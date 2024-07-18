@@ -18,11 +18,17 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
         self.recording_config = replace(recording_config)
         self.last_recording_config = replace(recording_config)
 
+        self.dpd_recording_mode.clear()
+        self.dpd_recording_mode.addItems(recording_config.MODES)
+
         if recording_config.mode is not None:
             self.dpd_recording_mode.setCurrentText(recording_config.mode)
         else:
             self.dpd_recording_mode.setCurrentIndex(-1)
             self.tme_time.setEnabled(False)
+
+        self.dpd_codec.clear()
+        self.dpd_codec.addItems(recording_config.CODECS)
 
         if recording_config.codec is not None:
             self.dpd_codec.setCurrentText(recording_config.codec)
@@ -38,14 +44,18 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
 
+        self.recording_mode_changed()
+
     def recording_mode_changed(self):
         recording_mode = self.dpd_recording_mode.currentText()
         if recording_mode == "" or recording_mode is None:
             recording_mode = None
         if recording_mode == "Timed":
             self.tme_time.setEnabled(True)
+            self.tme_time.setReadOnly(False)
         else:
             self.tme_time.setEnabled(False)
+            self.tme_time.setReadOnly(True)
         self.recording_config.mode = recording_mode
 
     def time_changed(self):

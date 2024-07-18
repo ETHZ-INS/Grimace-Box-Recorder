@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QDialogButtonBox, QMessageBo
 
 from app.config.video_files import VideoFilesConfig
 from app.layout.configure_video_files_dialog import Ui_DConfigureVideoFiles
-
+from app.validation.config.video_files_validator import VideoFilesValidator
 
 TOP_DEFAULTS = {
     "Incremental Number": "top_{recording_number}.avi",
@@ -122,29 +122,15 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
         self.video_files_config.grimace_results_templates[naming_mode] = self.txt_template_grimace.text()
 
     def apply(self):
-        # Make sure the templates are different
-        # The variable names are replaced with {var} so just switching the variable names would not be enough
-        # as in theory two different variables could contain the same value and still lead to duplicate file names
-        def simplify(template):
-            template = template.replace("{recording_number}", "{var}")
-            template = template.replace("{start_time}", "{var}")
-            return template
+        error = VideoFilesValidator.validate(self.video_files_config)
 
-        top_template = self.video_files_config.top_templates[self.video_files_config.naming_mode]
-        front_template = self.video_files_config.front_templates[self.video_files_config.naming_mode]
-        grimace_template = self.video_files_config.grimace_results_templates[self.video_files_config.naming_mode]
-
-        top_template = simplify(top_template)
-        front_template = simplify(front_template)
-        grimace_template = simplify(grimace_template)
-
-        if top_template == front_template or top_template == grimace_template or front_template == grimace_template:
+        if error is not None:
             dlg = QMessageBox(self)
-            dlg.setWindowTitle("Invalid Template")
-            dlg.setText("The templates for the different file types must be different")
+            dlg.setWindowTitle("Invalid Configuration")
+            dlg.setText(error)
             dlg.setIcon(QMessageBox.Icon.Warning)
             dlg.exec()
-            raise ValueError("Invalid template")
+            raise ValueError("Invalid Configuration")
 
         self.last_video_files_config = replace(self.video_files_config)
         self.applied_signal.emit(self.video_files_config)

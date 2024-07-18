@@ -75,6 +75,13 @@ class HorizontalGaugePlot(QLabel):
         qp.drawText(QRect(text_x, text_y, self.text_width, self.text_height), f"{self.score:.2f}", QtCore.Qt.AlignmentFlag.AlignCenter)
 
 
+STATS_TEMPLATE = """
+Intervals Analyzed: {num_intervals}  
+Frames Sampled: {num_frames_sampled}  
+Mean Grimace Score: {mean_grimace_score:.2f}
+"""
+
+
 class GrimaceResults(Ui_GGrimaceResults, QDialog):
     applied_signal = Signal(VideoFilesConfig)
 
@@ -84,6 +91,7 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
 
         self.grimace_images = grimace_images
         self.num_images = 0
+        self.num_frames_sampled = 0
 
         self.gauge_plot = HorizontalGaugePlot(self)
         self.gauge_plot.setSizePolicy(QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed))
@@ -105,6 +113,7 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
             if widget is not None:
                 widget.deleteLater()
         self.num_images = 0
+        self.num_frames_sampled = 0
 
     def refresh(self):
         # The way I'm keeping track of the number of images is a bit hacky, but it works for now
@@ -117,38 +126,58 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         for image, grimace_scores in self.grimace_images.items[self.num_images:]:
             # Add all images in the list that have not been added yet to the layout
 
-            # Render the 5 grimace scores on the image. This is mostly for debugging purposes
-            # and may be removed in the future
-            grimace_scores_string = "|".join([f"{score}" if score != 3 else "X" for score in grimace_scores])
-            image = cv2.resize(image, (150, 150), interpolation=cv2.INTER_LINEAR)
-            image = cv2.putText(image, grimace_scores_string, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2, cv2.LINE_AA)
-
-            # Support grayscale and color images
-            h, w, ch = image.shape
-            bytes_per_line = ch * w
-            if ch == 1:
-                image = QImage(image.data, w, h, bytes_per_line, QImage.Format.Format_Grayscale8)
-            else:
-                image = QImage(image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-
-            pixmap = QPixmap.fromImage(image)
-
             label = QLabel()
-            label.setPixmap(pixmap)
+            if image is not None:
+                # Render the 5 grimace scores on the image. This is mostly for debugging purposes
+                # and may be removed in the future
+                image = cv2.resize(image, (150, 150), interpolation=cv2.INTER_LINEAR)
+
+                if grimace_scores is not None:
+                    grimace_scores_string = "|".join([f"{score}" if score != 3 else "X" for score in grimace_scores])
+                    image = cv2.putText(image, grimace_scores_string, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2, cv2.LINE_AA)
+
+                # Support grayscale and color images
+                h, w, ch = image.shape
+                bytes_per_line = ch * w
+                if ch == 1:
+                    image = QImage(image.data, w, h, bytes_per_line, QImage.Format.Format_Grayscale8)
+                else:
+                    image = QImage(image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+
+                pixmap = QPixmap.fromImage(image)
+
+                label.setPixmap(pixmap)
+                self.num_frames_sampled += 1
+            else:
+                label.setText("No suitable image found")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setMinimumWidth(150)
+                label.setMinimumHeight(150)
+                label.setMaximumWidth(150)
+                label.setMaximumHeight(150)
+                label.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
 
             self.frm_grimace_images.layout().addWidget(label)
             self.num_images += 1
 
-        if self.num_images == 0:
+        all_grimace_scores = [grimace_scores for _, grimace_scores in self.grimace_images.items if
+                              grimace_scores is not None]
+        if len(all_grimace_scores) == 0:
             mean_grimace_score = 0.0
         else:
-            all_grimace_scores = np.stack([grimace_scores for _, grimace_scores in self.grimace_images.items], axis=0)
+            all_grimace_scores = np.stack(all_grimace_scores, axis=0)
             all_grimace_scores = all_grimace_scores.astype(np.float32)
             all_grimace_scores[all_grimace_scores == 3] = np.nan
             grimace_scores = np.nanmean(all_grimace_scores, axis=1)
             mean_grimace_score = np.nanmean(grimace_scores)
 
-        self.lbl_grimace_stats.setText(f"Frames Sampled: {self.num_images} \nMean Grimace Score: {mean_grimace_score:.2f}")
+        stats = STATS_TEMPLATE.format(
+            num_intervals=self.num_images,
+            num_frames_sampled=self.num_frames_sampled,
+            mean_grimace_score=mean_grimace_score
+        )
+
+        self.lbl_grimace_stats.setText(stats)
         self.gauge_plot.score = mean_grimace_score
         self.gauge_plot.update()
 
