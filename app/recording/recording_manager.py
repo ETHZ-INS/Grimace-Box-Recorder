@@ -418,12 +418,12 @@ class RecordingManager(QObject):
 
         self.camera_recorder.start()
 
-        self.top_video_writer.stop()
-        self.front_video_writer.stop()
+        #self.top_video_writer.stop()
+        #self.front_video_writer.stop()
 
-        if self.grimace_config.enabled:
-            self.grimace_analyzer.stop()
-            self.grimace_results_writer.stop()
+        #if self.grimace_config.enabled:
+        #    #self.grimace_analyzer.stop()
+        #    #self.grimace_results_writer.stop()
 
         self.top_video_writer.wait()
         self.front_video_writer.wait()

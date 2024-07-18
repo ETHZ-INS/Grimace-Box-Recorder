@@ -7,24 +7,23 @@ from PySide6.QtCore import QThread
 
 from app.dataflow.qlist import QList
 from app.dataflow.qqueue import QQueue
+from app.dataflow.queue_reader import QueueReader
 from grimace.frame_cropper import FrameCropper
 from grimace.frame_quality_scorer import FrameQualityScorer
 from grimace.grimace_scorer import GrimaceScorer
 
 
-class GrimaceAnalyzerV1(QThread):
+class GrimaceAnalyzerV1(QueueReader):
     def __init__(self, frame_quality_scorer: FrameQualityScorer, frame_cropper: FrameCropper,
                  grimace_scorer: GrimaceScorer, input_buffer: QQueue,
-                 output_buffer: QQueue[Tuple[int, float, np.ndarray]],
-                 output_list: QList, batch_size: int = 16, min_score: float = 3.25 / 6,
-                 frames_per_interval: int = 1800):
-        super(GrimaceAnalyzerV1, self).__init__()
+                 output_buffer: QQueue[Tuple[int, float, np.ndarray]], output_list: QList,
+                 batch_size: int = 16, min_score: float = 3.25 / 6, frames_per_interval: int = 1800):
+        super(GrimaceAnalyzerV1, self).__init__(input_buffer, wait_time=0.01)
 
         self.frame_quality_scorer = frame_quality_scorer
         self.frame_cropper = frame_cropper
         self.grimace_scorer = grimace_scorer
 
-        self.input_buffer = input_buffer
         self.output_buffer = output_buffer
         self.output_list = output_list
 
@@ -36,7 +35,10 @@ class GrimaceAnalyzerV1(QThread):
         self.running_interval_scores = []
         self.running_batch = []
 
-        self.running = False
+    def setup(self):
+        self.running_interval_frames = []
+        self.running_interval_scores = []
+        self.running_batch = []
 
     def process_batch(self):
         batch_size = min(self.batch_size, len(self.running_batch))
@@ -81,33 +83,21 @@ class GrimaceAnalyzerV1(QThread):
                 self.output_buffer.enqueue((frame_index, timestamp, grimace_scores))
                 break
 
+    def process_item(self, item):
+        frame = item
+        self.running_batch.append(frame)
 
-    def run(self):
-        self.running = True
+        if len(self.running_batch) < self.batch_size:
+            return
 
-        ended = False
-        while self.running or not ended:
-            while not self.input_buffer.is_empty():
-                frame = self.input_buffer.dequeue()
-                if frame is QQueue.End:
-                    self.running = False
-                    ended = True
-                    break
+        self.process_batch()
 
-                self.running_batch.append(frame)
+        if len(self.running_interval_frames) < self.frames_per_interval:
+            return
 
-                if len(self.running_batch) < self.batch_size:
-                    continue
+        self.process_interval()
 
-                self.process_batch()
-
-                if len(self.running_interval_frames) < self.frames_per_interval:
-                    continue
-
-                self.process_interval()
-
-            time.sleep(0.01)
-
+    def then(self):
         if len(self.running_batch) > 0:
             self.process_batch()
 
@@ -115,7 +105,5 @@ class GrimaceAnalyzerV1(QThread):
         if len(self.running_interval_frames) > self.frames_per_interval * 0.9:
             self.process_interval()
 
+    def close(self):
         self.output_buffer.close()
-
-    def stop(self):
-        self.running = False

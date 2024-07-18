@@ -1,37 +1,32 @@
-import time
+from pathlib import Path
 
 import cv2
-from PySide6.QtCore import QThread
 
 from app.dataflow.qqueue import QQueue
+from app.dataflow.queue_reader import QueueReader
 
 
-class BufferVideoWriter(QThread):
-    def __init__(self, video_writer: cv2.VideoWriter, video_buffer: QQueue):
-        super(BufferVideoWriter, self).__init__()
+class BufferVideoWriter(QueueReader):
+    def __init__(self, video_writer: cv2.VideoWriter, video_buffer: QQueue, timestamp_file: Path = None):
+        super(BufferVideoWriter, self).__init__(video_buffer, wait_time=0.01)
 
         self.video_writer = video_writer
-        self.video_buffer = video_buffer
+        self.timestamp_file = timestamp_file
 
-        self.running = False
+        self.timestamp_file_handle = None
 
-    def run(self):
-        self.running = True
-        ended = False
-        while self.running or not ended:
-            while not self.video_buffer.is_empty():
-                item = self.video_buffer.dequeue()
-                if item is QQueue.End:
-                    self.running = False
-                    ended = True
-                    break
+    def setup(self):
+        if self.timestamp_file is not None:
+            self.timestamp_file_handle = self.timestamp_file.open("w+")
+            self.timestamp_file_handle.write("frame_index,timestamp\n")
 
-                frame, frame_index, timestamp = item
-                self.video_writer.write(frame)
-            time.sleep(0.01)
-        print("Video writer stopped")
+    def process_item(self, item):
+        frame, frame_index, timestamp = item
+        self.video_writer.write(frame)
+        if self.timestamp_file_handle is not None:
+            self.timestamp_file_handle.write(f"{frame_index},{timestamp}\n")
+
+    def close(self):
+        if self.timestamp_file_handle is not None:
+            self.timestamp_file_handle.close()
         self.video_writer.release()
-        print("Video writer released")
-
-    def stop(self):
-        self.running = False
