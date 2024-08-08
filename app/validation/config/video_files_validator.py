@@ -6,6 +6,9 @@ from app.config.video_files import VideoFilesConfig
 class VideoFilesValidator:
     @classmethod
     def _validate(cls, video_files: VideoFilesConfig) -> Optional[str]:
+        if video_files is None:
+            return "Config is null"
+
         naming_mode = video_files.naming_mode
 
         if naming_mode is None:

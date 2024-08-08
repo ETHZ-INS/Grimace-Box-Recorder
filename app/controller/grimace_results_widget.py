@@ -9,6 +9,10 @@ from app.config.video_files import VideoFilesConfig
 from app.layout.grimace_results_widget import Ui_GGrimaceResults
 from app.dataflow.qlist import QList
 
+import logging
+
+logger = logging.getLogger("grimace_recorder.app.analysis.grimace_results_widget")
+
 
 class HorizontalGaugePlot(QLabel):
     def __init__(self, parent):
@@ -86,6 +90,7 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
     applied_signal = Signal(VideoFilesConfig)
 
     def __init__(self, parent, grimace_images: QList):
+        logger.debug("FUN GrimaceResults.__init__")
         super().__init__(parent)
         self.setupUi(self)
 
@@ -100,13 +105,18 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         self.gauge_plot.setMinimumWidth(100)
         self.frm_grimace_stats.layout().addWidget(self.gauge_plot)
 
+        bar = self.scrollArea.verticalScrollBar()
+        bar.rangeChanged.connect(lambda x, y: bar.setValue(y))
+
         self.clear_images()
         self.refresh()
 
         self.grimace_images.list_cleared.connect(self.clear_images)
         self.grimace_images.list_changed.connect(self.refresh)
+        logger.debug("FUNEND GrimaceResults.__init__")
 
     def clear_images(self):
+        logger.debug("FU GrimaceResults.clear_images")
         while self.frm_grimace_images.layout().count() > 0:
             item = self.frm_grimace_images.layout().takeAt(0)
             widget = item.widget()
@@ -116,6 +126,7 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         self.num_frames_sampled = 0
 
     def refresh(self):
+        logger.debug("FUN GrimaceResults.refresh")
         # The way I'm keeping track of the number of images is a bit hacky, but it works for now
 
         if len(self.grimace_images.items) < self.num_images:
@@ -180,6 +191,7 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         self.lbl_grimace_stats.setText(stats)
         self.gauge_plot.score = mean_grimace_score
         self.gauge_plot.update()
+        logger.debug("FUNEND GrimaceResults.refresh")
 
 
 if __name__ == "__main__":

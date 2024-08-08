@@ -8,6 +8,7 @@ import torch
 from grimace.frame_quality_model import FrameQualityModel
 from grimace.preprocessing.image import crop_image_to_square, average_channels
 
+
 class FrameQualityScorer:
     def __init__(self, frame_quality_model: FrameQualityModel):
         self.frame_quality_model = frame_quality_model

@@ -8,7 +8,6 @@ import torch
 class FrameQualityModel(torch.nn.Module):
     def __init__(self, device="cuda"):
         super(FrameQualityModel, self).__init__()
-        print("Loading model")
         self.base_model = timm.create_model("mobilenetv3_large_100", in_chans=1, pretrained=False)
 
         base_model_output = self.base_model(torch.zeros(1, 1, 224, 224))

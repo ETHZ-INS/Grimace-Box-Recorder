@@ -1,17 +1,19 @@
 import time
-from abc import ABC, abstractmethod
 
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread, Signal
 
 from app.dataflow.qqueue import QQueue
 
 
 class QueueReader(QThread):
-    def __init__(self, queue: QQueue, wait_time: float = 0.01):
+    error_signal = Signal(str)
+
+    def __init__(self, queue: QQueue, wait_time: float = 0.01, raise_if_full: bool = False):
         super(QueueReader, self).__init__()
 
         self.queue = queue
         self.wait_time = wait_time
+        self.raise_if_full = raise_if_full
 
         self.running = False
         self.error = None
@@ -30,6 +32,9 @@ class QueueReader(QThread):
 
     def process_until_empty(self) -> bool:
         while not self.queue.is_empty():
+            if self.raise_if_full and self.queue.get_fill_level() > 0.99:
+                raise RuntimeError("Queue is full")
+
             item = self.queue.dequeue()
             if not self.running:
                 return False
@@ -54,6 +59,8 @@ class QueueReader(QThread):
             self.then()
         except Exception as e:
             self.error = str(e)
+            self.error_signal.emit(self.error)
+            raise e
         finally:
             self.close()
             self.running = False

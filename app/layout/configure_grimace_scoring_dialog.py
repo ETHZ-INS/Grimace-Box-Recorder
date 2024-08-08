@@ -142,7 +142,7 @@ class Ui_DConfigureGrimaceScoring(object):
         self.label_7.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Enable Grimace Scoring:", None))
         self.chb_enable_grimace.setText("")
         self.label_2.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Grimace Model:", None))
-        self.dpd_grimace_model.setItemText(0, QCoreApplication.translate("DConfigureGrimaceScoring", u"V1.0 - Donkey", None))
+        self.dpd_grimace_model.setItemText(0, QCoreApplication.translate("DConfigureGrimaceScoring", u"V1 - SuperScorer", None))
 
         self.label_3.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Frame Interval:", None))
         self.dpd_frame_interval.setItemText(0, QCoreApplication.translate("DConfigureGrimaceScoring", u"10 Seconds", None))
@@ -153,8 +153,17 @@ class Ui_DConfigureGrimaceScoring(object):
         self.dpd_frame_interval.setItemText(5, QCoreApplication.translate("DConfigureGrimaceScoring", u"5 Minutes", None))
 
         self.label_4.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Frame Quality Model:", None))
+#if QT_CONFIG(tooltip)
+        self.dpd_frame_quality_device.setToolTip(QCoreApplication.translate("DConfigureGrimaceScoring", u"Select which device should be used to run the frame quality model", None))
+#endif // QT_CONFIG(tooltip)
         self.label_6.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Face Cropper Model:", None))
         self.label_8.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Grimace Scoring Model:", None))
+#if QT_CONFIG(tooltip)
+        self.dpd_face_cropper_device.setToolTip(QCoreApplication.translate("DConfigureGrimaceScoring", u"Select which device should be used to run the frame cropper model", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.dpd_grimace_scoring_device.setToolTip(QCoreApplication.translate("DConfigureGrimaceScoring", u"Select which device should be used to run the grimace scoring model", None))
+#endif // QT_CONFIG(tooltip)
         self.label_5.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Device Selection:", None))
     # retranslateUi
 

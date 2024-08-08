@@ -8,7 +8,7 @@ class GrimaceScoreModel(torch.nn.Module):
 
         self.device = device
 
-        self.base_model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        self.base_model = vit_b_16(weights=None)
         self.base_model.heads = torch.nn.Identity()
 
         base_model_output = self.base_model(torch.zeros(1, 3, 224, 224))

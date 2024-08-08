@@ -6,6 +6,9 @@ from app.config.grimace import GrimaceConfig
 class GrimaceConfigValidator:
     @classmethod
     def _validate(cls, grimace_config: GrimaceConfig) -> Optional[str]:
+        if grimace_config is None:
+            return "Config is null"
+
         if grimace_config.enabled is None:
             return "Grimace enabled is null"
 

@@ -6,6 +6,9 @@ from app.config.recording import RecordingConfig
 class RecordingConfigValidator:
     @classmethod
     def _validate(cls, recording_config: RecordingConfig) -> Optional[str]:
+        if recording_config is None:
+            return "Config is null"
+
         if recording_config.mode is None:
             return "Timing mode is null"
 

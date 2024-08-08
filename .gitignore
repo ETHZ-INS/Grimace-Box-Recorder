@@ -1,6 +1,7 @@
 .idea/
 build/
 dist/
+documentation/software_manual/auxil
 models/*.pt
 manual.synctex.gz
 main.spec

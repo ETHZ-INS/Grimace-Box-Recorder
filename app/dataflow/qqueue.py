@@ -1,5 +1,5 @@
 import threading
-from typing import Generic, TypeVar, List, Optional, Union
+from typing import Generic, TypeVar, Optional, Union
 
 from PySide6.QtCore import QObject, Signal
 
@@ -18,7 +18,7 @@ class QQueue(QObject, Generic[T]):
     item_added = Signal()
     item_removed = Signal()
 
-    def __init__(self, size: int, name: str = "Queue"):
+    def __init__(self, size: int, void: bool = False):
         super(QQueue, self).__init__()
 
         self.size = size
@@ -26,22 +26,19 @@ class QQueue(QObject, Generic[T]):
         self.head = 0
         self.tail = 0
         self.full = False
+        self.void = void
         self.lock = threading.Lock()
-
-        self.name = name
 
     def enqueue(self, item: Union[T, End]):
         with self.lock:
+            if self.void:
+                return
+
             self.queue[self.tail] = item
             if self.full:
                 self.head = (self.head + 1) % self.size  # move head forward if queue is full
             self.tail = (self.tail + 1) % self.size
             self.full = self.tail == self.head
-
-            if self.tail % 30 == 0:
-                fill_level = self._get_fill_level()
-                if fill_level > 0.1:
-                    print(f"Queue {self.name}: fill level {fill_level*100:.2f}%")
 
             self.item_added.emit()
 
@@ -84,3 +81,7 @@ class QQueue(QObject, Generic[T]):
     def get_fill_level(self):
         with self.lock:
             return self._get_fill_level()
+
+    def set_void(self):
+        with self.lock:
+            self.void = True

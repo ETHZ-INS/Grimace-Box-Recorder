@@ -8,6 +8,10 @@ from app.config.video_files import VideoFilesConfig
 from app.layout.configure_video_files_dialog import Ui_DConfigureVideoFiles
 from app.validation.config.video_files_validator import VideoFilesValidator
 
+import logging
+
+logger = logging.getLogger("grimace_recorder.app.analysis.configure_video_files_dialog")
+
 TOP_DEFAULTS = {
     "Incremental Number": "top_{recording_number}.avi",
     "Start Time": "top_{start_time}.avi",
@@ -29,6 +33,7 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
     applied_signal = Signal(VideoFilesConfig)
 
     def __init__(self, parent, video_files_config: VideoFilesConfig):
+        logger.debug("FUN ConfigureVideoFiles.__init__")
         super().__init__(parent)
         self.setupUi(self)
 
@@ -60,12 +65,14 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
 
         self.btnbox_buttons.accepted.connect(self.accept)
         self.btnbox_buttons.rejected.connect(self.reject)
+        logger.debug("FUNEND ConfigureVideoFiles.__init__")
 
     def initialize_templates(self):
         """
         Initialize the templates in the local config with default values if they are not set
         """
 
+        logger.debug("FU ConfigureVideoFiles.initialize_templates")
         def set_defaults(target, defaults):
             for mode, default in defaults.items():
                 if mode not in target or target[mode] is None or target[mode] == "":
@@ -76,7 +83,9 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
         set_defaults(self.video_files_config.grimace_results_templates, GRIMACE_RESULTS_DEFAULTS)
 
     def naming_mode_changed(self):
+        logger.debug("FU ConfigureRecording.recording_mode_changed")
         naming_mode = self.dpd_naming_mode.currentText()
+        logger.info("Naming Mode Selected: %s", naming_mode)
         if naming_mode == "" or naming_mode is None:
             naming_mode = None
         self.video_files_config.naming_mode = naming_mode
@@ -110,18 +119,28 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
         self.txt_template_grimace.setText(self.video_files_config.grimace_results_templates[naming_mode])
 
     def template_top_changed(self):
+        logger.debug("FU ConfigureRecording.recording_mode_changed")
         naming_mode = self.video_files_config.naming_mode
-        self.video_files_config.top_templates[naming_mode] = self.txt_template_top.text()
+        template_top = self.txt_template_top.text()
+        logger.info("Template Top Changed: %s", template_top)
+        self.video_files_config.top_templates[naming_mode] = template_top
 
     def template_front_changed(self):
+        logger.debug("FU ConfigureRecording.recording_mode_changed")
         naming_mode = self.video_files_config.naming_mode
-        self.video_files_config.front_templates[naming_mode] = self.txt_template_front.text()
+        template_front = self.txt_template_front.text()
+        logger.info("Template Front Changed: %s", template_front)
+        self.video_files_config.front_templates[naming_mode] = template_front
 
     def template_grimace_changed(self):
+        logger.debug("FU ConfigureRecording.recording_mode_changed")
         naming_mode = self.video_files_config.naming_mode
-        self.video_files_config.grimace_results_templates[naming_mode] = self.txt_template_grimace.text()
+        template_grimace = self.txt_template_grimace.text()
+        logger.info("Template Grimace Changed: %s", template_grimace)
+        self.video_files_config.grimace_results_templates[naming_mode] = template_grimace
 
     def apply(self):
+        logger.debug("FUN ConfigureRecording.apply")
         error = VideoFilesValidator.validate(self.video_files_config)
 
         if error is not None:
@@ -134,13 +153,17 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
 
         self.last_video_files_config = replace(self.video_files_config)
         self.applied_signal.emit(self.video_files_config)
+        logger.debug("FUNEND ConfigureRecording.apply")
 
     def accept(self):
+        logger.debug("FUN ConfigureRecording.accept")
         if self.video_files_config != self.last_video_files_config:
             self.apply()
         super().accept()
+        logger.debug("FUNEND ConfigureRecording.accept")
 
     def select_folder(self):
+        logger.debug("FU ConfigureRecording.select_folder")
         dlg = QFileDialog(self)
         dlg.setFileMode(QFileDialog.FileMode.Directory)
         dlg.setNameFilter("Pylon Camera Configuration (*.pfs)")

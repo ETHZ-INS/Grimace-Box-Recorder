@@ -6,6 +6,9 @@ from app.config.camera import CameraConfig
 class CameraConfigValidator:
     @classmethod
     def _validate(cls, camera_config: CameraConfig) -> Optional[str]:
+        if camera_config is None:
+            return "Config is null"
+
         if camera_config.fps is None:
             return "FPS is null"
 

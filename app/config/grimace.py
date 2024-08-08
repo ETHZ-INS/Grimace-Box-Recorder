@@ -11,4 +11,4 @@ class GrimaceConfig:
     face_cropper_device: str = "cpu"
     grimace_scoring_device: str = "cpu"
 
-    GRIMACE_MODELS = ["V1 - SuperScorer"]
+    GRIMACE_MODELS = ["V1 - SuperScorer", "Demo (Fake Mouse)"]

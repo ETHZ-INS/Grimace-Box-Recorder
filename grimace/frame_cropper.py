@@ -29,8 +29,7 @@ class FrameCropper:
 
     def crop(self, frame: np.ndarray) -> Optional[np.ndarray]:
         bounding_box = self.frame_cropper_model.get_bounding_box(frame)
-
-        #print(bounding_box[0])
+        #bounding_box = np.array([1.0, 128.0/1280.0, 0.0, 1152.0/1280.0, 1.0])
 
         if bounding_box[0] < self.confidence_threshold:
             return None

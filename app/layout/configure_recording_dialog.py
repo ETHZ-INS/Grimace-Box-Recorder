@@ -32,6 +32,7 @@ class Ui_DConfigureRecording(object):
         DConfigureRecording.setSizePolicy(sizePolicy)
         DConfigureRecording.setMinimumSize(QSize(400, 200))
         DConfigureRecording.setMaximumSize(QSize(400, 200))
+        DConfigureRecording.setModal(False)
         self.verticalLayout = QVBoxLayout(DConfigureRecording)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setSizeConstraint(QLayout.SetMinAndMaxSize)
@@ -113,12 +114,15 @@ class Ui_DConfigureRecording(object):
         self.dpd_recording_mode.setItemText(0, QCoreApplication.translate("DConfigureRecording", u"Timed", None))
         self.dpd_recording_mode.setItemText(1, QCoreApplication.translate("DConfigureRecording", u"Manual", None))
 
-        self.label_3.setText(QCoreApplication.translate("DConfigureRecording", u"Time:", None))
+        self.label_3.setText(QCoreApplication.translate("DConfigureRecording", u"Duration:", None))
         self.tme_time.setDisplayFormat(QCoreApplication.translate("DConfigureRecording", u"HH:mm:ss.zzz", None))
         self.label_4.setText(QCoreApplication.translate("DConfigureRecording", u"Video Codec:", None))
         self.dpd_codec.setItemText(0, QCoreApplication.translate("DConfigureRecording", u"FMP4", None))
         self.dpd_codec.setItemText(1, QCoreApplication.translate("DConfigureRecording", u"MP4V", None))
         self.dpd_codec.setItemText(2, QCoreApplication.translate("DConfigureRecording", u"FFV1", None))
 
+#if QT_CONFIG(tooltip)
+        self.dpd_codec.setToolTip(QCoreApplication.translate("DConfigureRecording", u"Select which video codec should be used to encode the recorded videos", None))
+#endif // QT_CONFIG(tooltip)
     # retranslateUi
 
