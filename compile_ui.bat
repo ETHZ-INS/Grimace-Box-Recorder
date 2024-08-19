@@ -1,3 +1,4 @@
+:: The pyside6-uic command is provided by the pyside6 Python module, so the command needs to be executed inside the conda environment
 call conda activate GrimaceRecorder
 echo Compiling Main Window...
 pyside6-uic "ui/WGrimaceBox.ui" -o "app/layout/grimace_box.py"

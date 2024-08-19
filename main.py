@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 import logging.handlers
 
+from util.trace import Trace
+
 logging.addLevelName(logging.DEBUG-5, "TRACE")
 
 logger = logging.getLogger("grimace_recorder")
@@ -31,12 +33,12 @@ import numpy as np
 import torch
 
 from PySide6 import QtCore
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QImage, QPixmap, QShortcut, QKeySequence
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 from PySide6.QtCore import QThread
 from pypylon import pylon
 
-from app.config.camera import CameraConfig
+from app.config.camera import CameraConfig, CameraConfig
 from app.config.grimace import GrimaceConfig
 from app.config.recording import RecordingConfig
 from app.config.serialization.config_loader import ConfigLoader
@@ -80,12 +82,17 @@ Grimace Results File: {grimace_results_file}
 
 
 class MainWindow(Ui_WGrimaceBox, QMainWindow):
+    @Trace.trace(logger)
     def __init__(self):
-        logger.debug("FUN MainWindow.__init__")
+        print("a")
         super(MainWindow, self).__init__()
+        print("b")
         self.setupUi(self)
 
         self.setStyleSheet(":disabled { color: gray }")
+
+        self.debug_mode = False
+        self.lbl_debug_mode.setVisible(False)
 
         self.action_configure_top_camera.triggered.connect(self.configure_top_camera)
         self.action_configure_front_camera.triggered.connect(self.configure_front_camera)
@@ -109,6 +116,11 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.preview_buffer_front = QVariable()
         self.preview_buffer_front.value_set.connect(self.on_video_frame_front)
 
+        self.demo_shortcut = QShortcut(self)
+        self.demo_shortcut.setKey(QKeySequence("CTRL+D"))
+
+        self.demo_shortcut.activated.connect(self.enable_debug_mode)
+
         self.recording_manager = RecordingManager(self.preview_buffer_top, self.preview_buffer_front)
         self.recording_manager.overview_changed_signal.connect(self.overview_changed)
         self.recording_manager.warnings_changed_signal.connect(self.warnings_changed)
@@ -130,7 +142,10 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.update_recording_button()
 
         QThread.currentThread().setPriority(QThread.Priority.LowPriority)
-        logger.debug("ENDFUN MainWindow.__init__")
+
+    def enable_debug_mode(self):
+        self.debug_mode = True
+        self.lbl_debug_mode.setVisible(True)
 
     def resizeEvent(self, event):
         self.update_video_label_size()
@@ -158,8 +173,8 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         return devices
 
+    @Trace.trace(logger)
     def update_menubar(self):
-        logger.log(logging.DEBUG, "FUN MainWindow.update_menubar")
         actions_enabled = not self.recording_manager.recording_running
         self.action_configure_top_camera.setEnabled(actions_enabled)
         self.action_configure_front_camera.setEnabled(actions_enabled)
@@ -170,10 +185,9 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.action_load_project.setEnabled(actions_enabled)
         self.action_save_project.setEnabled(True)
         self.action_save_project_as.setEnabled(True)
-        logger.debug("ENDFUN MainWindow.update_menubar")
 
+    @Trace.trace(logger)
     def update_recording_button(self):
-        logger.debug("FUN MainWindow.update_recording_button")
         message = self.recording_manager.get_not_ready_reason()
 
         self.btn_record.setEnabled(message is None)
@@ -182,15 +196,14 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.btn_record.setText("Stop Recording")
         else:
             self.btn_record.setText("Start Recording")
-        logger.debug("ENDFUN MainWindow.update_recording_button")
 
+    @Trace.trace(logger)
     def update_video_label_size(self):
-        logger.debug("FUN MainWindow.update_video_label_size")
         label_width = self.lbl_video_top.width()
 
         def calculate_size(camera_recorder) -> Tuple[int, int]:
-            width = camera_recorder.get_width() if camera_recorder is not None else 375
-            height = camera_recorder.get_height() if camera_recorder is not None else 300
+            width = camera_recorder.get_width() if camera_recorder is not None else 250
+            height = camera_recorder.get_height() if camera_recorder is not None else 200
             aspect_ratio = width / height
             height = math.ceil(label_width / aspect_ratio)
             return width, height
@@ -199,8 +212,8 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         video_front_width, video_front_height = calculate_size(self.recording_manager.camera_recorder.front_camera)
         max_height = max(video_top_height, video_front_height)
 
-        self.lbl_video_front.setMinimumSize(375, max_height)
-        self.lbl_video_top.setMinimumSize(375, max_height)
+        self.lbl_video_front.setMinimumSize(250, max_height)
+        self.lbl_video_top.setMinimumSize(250, max_height)
         self.lbl_video_front.setMaximumSize(800, max_height)
         self.lbl_video_top.setMaximumSize(800, max_height)
 
@@ -208,7 +221,6 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.on_video_frame_top()
         if self.recording_manager.camera_recorder.front_camera is not None:
             self.on_video_frame_front()
-        logger.debug("ENDFUN MainWindow.update_video_label_size")
 
     def process_frame(self, frame: np.ndarray, width: int, height: int) -> QPixmap:
         h, w, ch = frame.shape
@@ -257,131 +269,129 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         self.lbl_video_front.setPixmap(frame)
 
+    @Trace.trace(logger)
     def setup_top_camera(self, camera_config: CameraConfig, start: bool = True):
-        logger.debug("FUN MainWindow.setup_top_camera")
         self.recording_manager.configure_top_camera(camera_config, start)
         self.recording_manager.reset_error()
 
-        if camera_config.camera_id is None:
+        camera_ready = True
+        if camera_config.camera_type == "Pylon" and camera_config.camera_id is None:
+            camera_ready = False
+        elif camera_config.camera_type == "Video File" and camera_config.video_file is None:
+            camera_ready = False
+
+        if not camera_ready:
             self.lbl_video_top.clear()
             self.lbl_video_top.setText("Top camera not configured")
         self.update_video_label_size()
-        logger.debug("FUNEND MainWindow.setup_top_camera")
 
+    @Trace.trace(logger)
     def setup_front_camera(self, camera_config: CameraConfig, start: bool = True):
-        logger.debug("FUN MainWindow.setup_front_camera")
         self.recording_manager.configure_front_camera(camera_config, start)
         self.recording_manager.reset_error()
 
-        if camera_config.camera_id is None:
+        camera_ready = True
+        if camera_config.camera_type == "Pylon" and camera_config.camera_id is None:
+            camera_ready = False
+        elif camera_config.camera_type == "Video File" and camera_config.video_file is None:
+            camera_ready = False
+
+        if not camera_ready:
             self.lbl_video_front.clear()
             self.lbl_video_front.setText("Front camera not configured")
         self.update_video_label_size()
-        logger.debug("ENDFUN MainWindow.setup_front_camera")
 
+    @Trace.trace(logger)
     def configure_top_camera(self):
-        logger.debug("FUN MainWindow.configure_top_camera")
         available_cameras = self.get_available_cameras()
 
         if self.recording_manager.camera_front_config is not None:
             if self.recording_manager.camera_front_config.camera_id is not None:
-                # TODO: ValueError: list.remove(x): x not in list when loading project
-                #  with missing cameras then trying to open camera config
-                available_cameras.remove(self.recording_manager.camera_front_config.camera_id)
+                if self.recording_manager.camera_front_config.camera_id in available_cameras:
+                    available_cameras.remove(self.recording_manager.camera_front_config.camera_id)
 
-        dlg = ConfigureCamera(self, self.recording_manager.camera_top_config, available_cameras)
+        dlg = ConfigureCamera(self, self.recording_manager.camera_top_config, available_cameras, debug_mode=self.debug_mode)
         dlg.lbl_title.setText("Configure Top Camera")
         dlg.setWindowTitle("Configure Top Camera")
         dlg.applied_signal.connect(self.setup_top_camera)
         dlg.exec()
-        logger.debug("ENDFUN MainWindow.configure_top_camera")
 
+    @Trace.trace(logger)
     def configure_front_camera(self):
-        logger.debug("FUN MainWindow.configure_front_camera")
         available_cameras = self.get_available_cameras()
 
         if self.recording_manager.camera_top_config is not None:
             if self.recording_manager.camera_top_config.camera_id is not None:
-                available_cameras.remove(self.recording_manager.camera_top_config.camera_id)
+                if self.recording_manager.camera_top_config.camera_id in available_cameras:
+                    available_cameras.remove(self.recording_manager.camera_top_config.camera_id)
 
-        dlg = ConfigureCamera(self, self.recording_manager.camera_front_config, available_cameras)
+        dlg = ConfigureCamera(self, self.recording_manager.camera_front_config, available_cameras, debug_mode=self.debug_mode)
         dlg.lbl_title.setText("Configure Front Camera")
         dlg.setWindowTitle("Configure Front Camera")
         dlg.applied_signal.connect(self.setup_front_camera)
         dlg.exec()
-        logger.debug("ENDFUN MainWindow.configure_front_camera")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_recording_error(self, _: str):
-        logger.warning("FUN MainWindow.on_recording_error")
         self.overview_changed()
         self.update_menubar()
         self.update_recording_button()
-        logger.warning("ENDFUN MainWindow.on_recording_error")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_analysis_error(self, _: str):
-        logger.warning("FUN MainWindow.on_analysis_error")
         self.overview_changed()
         self.update_menubar()
         self.update_recording_button()
-        logger.warning("ENDFUN MainWindow.on_analysis_error")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_top_camera_error(self, error: str):
-        logger.warning("FUN MainWindow.on_top_camera_error")
         self.lbl_video_top.setText(error)
         self.update_menubar()
         self.update_recording_button()
-        logger.warning("ENDFUN MainWindow.on_top_camera_error")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_front_camera_error(self, error: str):
-        logger.warning("FUN MainWindow.on_front_camera_error")
         self.lbl_video_front.setText(error)
         self.update_menubar()
         self.update_recording_button()
-        logger.warning("ENDFUN MainWindow.on_front_camera_error")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def recording_config_changed(self, recording_config: RecordingConfig):
-        logger.warning("FUN MainWindow.recording_config_changed")
         self.recording_manager.configure_recording(recording_config)
         self.recording_manager.reset_error()
-        logger.warning("ENDFUN MainWindow.recording_config_changed")
 
+    @Trace.trace(logger)
     def configure_recording(self):
-        logger.debug("FUN MainWindow.configure_recording")
         dlg = ConfigureRecording(self, self.recording_manager.recording_config)
         dlg.applied_signal.connect(self.recording_config_changed)
         dlg.exec()
-        logger.debug("ENDFUN MainWindow.configure_recording")
 
+    @Trace.trace(logger)
     def video_files_config_changed(self, video_files_config: VideoFilesConfig):
-        logger.debug("FUN MainWindow.video_files_config_changed")
         self.recording_manager.recording_number = 1
         self.recording_manager.configure_video_files(video_files_config)
         self.recording_manager.reset_error()
-        logger.debug("ENDFUN MainWindow.video_files_config_changed")
 
+    @Trace.trace(logger)
     def configure_video_files(self):
-        logger.debug("FUN MainWindow.configure_video_files")
         dlg = ConfigureVideoFiles(self, self.recording_manager.video_files_config)
         dlg.applied_signal.connect(self.video_files_config_changed)
         dlg.exec()
-        logger.debug("ENDFUN MainWindow.configure_video_files")
 
+    @Trace.trace(logger)
     def grimace_config_changed(self, grimace_config):
-        logger.debug("FUN MainWindow.grimace_config_changed")
         self.recording_manager.configure_grimace(grimace_config)
         self.recording_manager.reset_error()
-        logger.debug("ENDFUN MainWindow.grimace_config_changed")
 
+    @Trace.trace(logger)
     def configure_grimace_scoring(self):
-        logger.debug("FUN MainWindow.configure_grimace_scoring")
         available_devices = self.get_available_devices()
-        dlg = ConfigureGrimaceScoring(self, self.recording_manager.grimace_config, available_devices)
+        dlg = ConfigureGrimaceScoring(self, self.recording_manager.grimace_config, available_devices, debug_mode=self.debug_mode)
         dlg.applied_signal.connect(self.grimace_config_changed)
         dlg.exec()
-        logger.debug("ENDFUN MainWindow.configure_grimace_scoring")
 
+    @Trace.trace(logger)
     def overview_changed(self):
-        logger.debug("FUN MainWindow.overview_changed")
         recording_running = self.recording_manager.recording_running
         recording_state = "running recording" if recording_running else "next recording"
 
@@ -503,10 +513,8 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.update_menubar()
         self.update_recording_button()
 
-        logger.debug("ENDFUN MainWindow.overview_changed")
-
+    @Trace.trace(logger)
     def warnings_changed(self):
-        logger.debug("FUN MainWindow.warnings_changed")
         warnings = self.recording_manager.get_warnings()
         if warnings:
             warning_title = "## Warnings:  \n"
@@ -515,10 +523,9 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.lbl_warnings.setText(warning_text)
         else:
             self.lbl_warnings.setText("")
-        logger.debug("ENDFUN MainWindow.warnings_changed")
 
+    @Trace.trace(logger)
     def open_grimace_results_window(self):
-        logger.debug("FUN MainWindow.open_grimace_results_window")
         if self.grimace_results_window is not None and self.grimace_results_window.isVisible():
             return
 
@@ -527,32 +534,28 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         self.grimace_results_window = GrimaceResults(self, self.recording_manager.grimace_results_list)
         self.grimace_results_window.show()
-        logger.debug("ENDFUN MainWindow.open_grimace_results_window")
 
+    @Trace.trace(logger)
     def recording_started(self):
-        logger.debug("FUN MainWindow.recording_started")
         if self.recording_manager.grimace_config.enabled:
             self.open_grimace_results_window()
         self.update_menubar()
         self.update_recording_button()
         self.warnings_changed()
-        logger.debug("ENDFUN MainWindow.recording_started")
 
+    @Trace.trace(logger)
     def recording_stopped(self):
-        logger.debug("FUN recording_stopped")
         self.update_menubar()
         self.update_recording_button()
         self.warnings_changed()
-        logger.debug("ENDFUN MainWindow.recording_stopped")
 
+    @Trace.trace(logger)
     def start_recording(self):
-        logger.debug("FUN MainWindow.start_recording")
         self.recording_manager.prepare_recording()
         self.recording_manager.start_recording()
-        logger.debug("ENDFUN MainWindow.start_recording")
 
+    @Trace.trace(logger)
     def stop_recording(self):
-        logger.debug("FUN MainWindow.stop_recording")
         if self.recording_manager.recording_config.mode == "Timed":
             msg = QMessageBox(parent=self)
             msg.setWindowTitle("Confirm")
@@ -566,18 +569,16 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
                 return
 
         self.recording_manager.stop_recording()
-        logger.debug("ENDFUN MainWindow.stop_recording")
 
+    @Trace.trace(logger)
     def btn_record_clicked(self):
-        logger.debug("FUN MainWindow.btn_record_clicked")
         if not self.recording_manager.recording_running:
             self.start_recording()
         else:
             self.stop_recording()
-        logger.debug("ENDFUN MainWindow.btn_record_clicked")
 
+    @Trace.trace(logger)
     def closeEvent(self, event):
-        logger.debug("FUN MainWindow.closeEvent")
         if self.recording_manager.recording_running:
             msg = QMessageBox(parent=self)
             msg.setWindowTitle("Confirm")
@@ -594,10 +595,9 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.recording_manager.force_stop_recording(start_preview=False)
 
         super(MainWindow, self).closeEvent(event)
-        logger.debug("ENDFUN MainWindow.closeEvent")
 
+    @Trace.trace(logger)
     def save_project(self):
-        logger.debug("FUN MainWindow.save_project")
         if self.config_file is None:
             return self.save_project_as()
         camera_top_config = self.recording_manager.camera_top_config
@@ -607,10 +607,9 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         grimace_config = self.recording_manager.grimace_config
         ConfigLoader.save(Path(self.config_file), camera_top_config, camera_front_config,
                           recording_config, video_files_config, grimace_config)
-        logger.debug("ENDFUN MainWindow.save_project")
 
+    @Trace.trace(logger)
     def save_project_as(self):
-        logger.debug("FUN MainWindow.save_project_as")
         if self.config_file is None:
             selected_file = str(Path.home() / "project.gb")
         else:
@@ -621,10 +620,9 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         if file_name:
             self.config_file = file_name
             self.save_project()
-        logger.debug("ENDFUN MainWindow.save_project_as")
 
+    @Trace.trace(logger)
     def load_project(self):
-        logger.debug("FUN MainWindow.load_project")
         if self.recording_manager.recording_running:
             msg = QMessageBox(parent=self)
             msg.setWindowTitle("Error")
@@ -724,7 +722,6 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.on_front_camera_error(str(e))
 
         self.recording_manager.start_preview()
-        logger.debug("ENDFUN MainWindow.load_project")
 
 
 if __name__ == "__main__":

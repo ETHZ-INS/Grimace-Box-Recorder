@@ -9,6 +9,8 @@ from app.layout.configure_grimace_scoring_dialog import Ui_DConfigureGrimaceScor
 
 import logging
 
+from util.trace import Trace
+
 logger = logging.getLogger("grimace_recorder.app.analysis.configure_grimace_scoring_dialog")
 
 
@@ -25,8 +27,8 @@ FRAME_INTERVAL_OPTIONS = [
 class ConfigureGrimaceScoring(Ui_DConfigureGrimaceScoring, QDialog):
     applied_signal = Signal(GrimaceConfig)
 
-    def __init__(self, parent, grimace_config: GrimaceConfig, available_devices: List[Tuple[str, str]]):
-        logger.debug("FUN ConfigureGrimaceScoring.__init__")
+    @Trace.trace(logger)
+    def __init__(self, parent, grimace_config: GrimaceConfig, available_devices: List[Tuple[str, str]], debug_mode: bool = False):
         super().__init__(parent)
         self.setupUi(self)
 
@@ -35,8 +37,11 @@ class ConfigureGrimaceScoring(Ui_DConfigureGrimaceScoring, QDialog):
 
         self.chb_enable_grimace.setChecked(grimace_config.enabled)
 
+        grimace_models = grimace_config.GRIMACE_MODELS
+        if not debug_mode:
+            grimace_models = [model for model in grimace_models if model != "Demo (Fake Mouse)"]
         self.dpd_grimace_model.clear()
-        self.dpd_grimace_model.addItems(grimace_config.GRIMACE_MODELS)
+        self.dpd_grimace_model.addItems(grimace_models)
         if grimace_config.grimace_model is not None:
             self.dpd_grimace_model.setCurrentText(grimace_config.grimace_model)
         else:
@@ -83,10 +88,9 @@ class ConfigureGrimaceScoring(Ui_DConfigureGrimaceScoring, QDialog):
         self.btn_apply.clicked.connect(self.apply)
 
         self.enable_grimace_changed()
-        logger.debug("FUNEND ConfigureGrimaceScoring.__init__")
 
-    def enable_grimace_changed(self):
-        logger.debug("FU ConfigureGrimaceScoring.enable_grimace_changed")
+    @Trace.trace(logger)
+    def enable_grimace_changed(self, *_):
         grimace_enabled = self.chb_enable_grimace.isChecked()
         self.grimace_config.enabled = grimace_enabled
         logger.info("Grimace Analysis Enabled: %s", grimace_enabled)
@@ -97,45 +101,43 @@ class ConfigureGrimaceScoring(Ui_DConfigureGrimaceScoring, QDialog):
         self.dpd_face_cropper_device.setEnabled(self.grimace_config.enabled)
         self.dpd_grimace_scoring_device.setEnabled(self.grimace_config.enabled)
 
-    def grimace_model_changed(self):
-        logger.debug("FU ConfigureGrimaceScoring.grimace_model_changed")
+    @Trace.trace(logger)
+    def grimace_model_changed(self, *_):
         grimace_model = self.dpd_grimace_model.currentText()
         self.grimace_config.grimace_model = grimace_model
         logger.info("Grimace Analysis Enabled: %s", grimace_model)
 
-    def frame_interval_changed(self):
-        logger.debug("FU ConfigureGrimaceScoring.frame_interval_changed")
+    @Trace.trace(logger)
+    def frame_interval_changed(self, *_):
         frame_interval = self.dpd_frame_interval.currentData()
         self.grimace_config.frame_interval = frame_interval
         logger.info("Frame Interval Selected: %s", frame_interval)
 
-    def face_quality_device_changed(self):
-        logger.debug("FU ConfigureGrimaceScoring.face_quality_device_changed")
+    @Trace.trace(logger)
+    def face_quality_device_changed(self, *_):
         frame_quality_device = self.dpd_frame_quality_device.currentData()
         self.grimace_config.frame_quality_device = frame_quality_device
         logger.info("Frame Quality Device Selected: %s", frame_quality_device)
 
-    def face_cropper_device_changed(self):
-        logger.debug("FU ConfigureGrimaceScoring.face_cropper_device_changed")
+    @Trace.trace(logger)
+    def face_cropper_device_changed(self, *_):
         face_cropper_device = self.dpd_face_cropper_device.currentData()
         self.grimace_config.face_cropper_device = face_cropper_device
         logger.info("Face Cropper Device Selected: %s", face_cropper_device)
 
-    def grimace_scoring_device_changed(self):
-        logger.debug("FU ConfigureGrimaceScoring.grimace_scoring_device_changed")
+    @Trace.trace(logger)
+    def grimace_scoring_device_changed(self, *_):
         grimace_scoring_device = self.dpd_grimace_scoring_device.currentData()
         self.grimace_config.grimace_scoring_device = grimace_scoring_device
         logger.info("Grimace Scoring Device Selected: %s", grimace_scoring_device)
 
+    @Trace.trace(logger)
     def apply(self):
-        logger.debug("FUN ConfigureGrimaceScoring.apply")
         self.last_grimace_config = replace(self.grimace_config)
         self.applied_signal.emit(self.grimace_config)
-        logger.debug("FUNEND ConfigureGrimaceScoring.apply")
 
+    @Trace.trace(logger)
     def accept(self):
-        logger.debug("FUN ConfigureGrimaceScoring.accept")
         if self.grimace_config != self.last_grimace_config:
             self.apply()
         super().accept()
-        logger.debug("FUNEND ConfigureGrimaceScoring.accept")

@@ -13,6 +13,8 @@ from app.recording.recording_context import RecordingContext
 
 import logging
 
+from util.trace import Trace
+
 logger = logging.getLogger("grimace_recorder.app.recording.dual_video_recorder")
 
 
@@ -27,8 +29,8 @@ class PylonDualCameraRecorder(QThread):
     stop_signal = Signal()
 
     class Camera:
+        @Trace.trace(logger)
         def __init__(self, camera: Union[pylon.InstantCamera, str], fps: float = 30.0, config_file: Path = None):
-            logger.debug("FUN PylonDualCameraRecorder.Camera.__init__")
             self.target_fps = fps
             self.config_file = config_file
             self.timestamp_offset = None
@@ -77,7 +79,6 @@ class PylonDualCameraRecorder(QThread):
             camera.MaxNumBuffer = 1000
 
             self.camera = camera
-            logger.debug("FUNEND PylonDualCameraRecorder.Camera.__init__")
 
         def get_width(self):
             return self.width
@@ -85,16 +86,16 @@ class PylonDualCameraRecorder(QThread):
         def get_height(self):
             return self.height
 
+        @Trace.trace(logger)
         def set_preview_buffer(self, preview_buffer: QVariable):
-            logger.debug("FU PylonDualCameraRecorder.Camera.set_preview_buffer")
             self.preview_buffer = preview_buffer
 
+        @Trace.trace(logger)
         def set_video_buffer(self, video_buffer: QQueue):
-            logger.debug("FU PylonDualCameraRecorder.Camera.set_video_buffer")
             self.video_buffer = video_buffer
 
+        @Trace.trace(logger)
         def set_grimace_buffer(self, grimace_buffer: QQueue):
-            logger.debug("FU PylonDualCameraRecorder.Camera.set_grimace_buffer")
             self.grimace_buffer = grimace_buffer
 
         def set_timestamp_offset(self, timestamp: float):
@@ -115,16 +116,16 @@ class PylonDualCameraRecorder(QThread):
         def reset_timestamp_offset(self):
             self.timestamp_offset = None
 
+        @Trace.trace(logger)
         def reset(self):
-            logger.debug("FU PylonDualCameraRecorder.Camera.reset")
             self.reset_frame_index()
             self.reset_frame_number()
             self.reset_dropped_frames()
             self.reset_timestamp_history()
             self.reset_timestamp_offset()
 
+    @Trace.trace(logger)
     def __init__(self):
-        logger.debug("FU PylonDualCameraRecorder.__init__")
         super(PylonDualCameraRecorder, self).__init__()
 
         self.top_camera: Optional[PylonDualCameraRecorder.Camera] = None
@@ -134,8 +135,8 @@ class PylonDualCameraRecorder(QThread):
 
         self.running = False
 
+    @Trace.trace(logger)
     def set_top_camera(self, camera: Optional[Union[pylon.InstantCamera, str]], fps: float = 30.0, config_file: Path = None, start: bool = True):
-        logger.debug("FUN PylonDualCameraRecorder.set_top_camera")
         if self.running:
             self.stop()
             self.wait()
@@ -149,10 +150,9 @@ class PylonDualCameraRecorder(QThread):
 
         if start:
             self.start()
-        logger.debug("FUNEND PylonDualCameraRecorder.set_top_camera")
 
+    @Trace.trace(logger)
     def set_front_camera(self, camera: Optional[Union[pylon.InstantCamera, str]], fps: float = 30.0, config_file: Path = None, start: bool = True):
-        logger.debug("FUN PylonDualCameraRecorder.set_front_camera")
         if self.running:
             self.stop()
             self.wait()
@@ -166,14 +166,13 @@ class PylonDualCameraRecorder(QThread):
 
         if start:
             self.start()
-        logger.debug("FUNEND PylonDualCameraRecorder.set_front_camera")
 
+    @Trace.trace(logger)
     def set_recording_context(self, recording_context: RecordingContext):
-        logger.debug("FU PylonDualCameraRecorder.set_recording_context")
         self.recording_context = recording_context
 
+    @Trace.trace(logger)
     def synchronize_camera_clocks(self):
-        logger.debug("FU PylonDualCameraRecorder.synchronize_camera_clocks")
         execute_functions = []
         if self.top_camera is not None:
             execute_functions.append(self.top_camera.camera.GevTimestampControlReset.Execute)
@@ -182,8 +181,8 @@ class PylonDualCameraRecorder(QThread):
         for execute_function in execute_functions:
             execute_function()
 
+    @Trace.trace(logger)
     def synchronize_camera_frames(self, top_camera: pylon.InstantCamera, front_camera: pylon.InstantCamera, frame_interval: float):
-        logger.debug("FU PylonDualCameraRecorder.synchronize_camera_frames")
         top_grab_result = top_camera.RetrieveResult(1000, pylon.TimeoutHandling_Return)
         front_grab_result = front_camera.RetrieveResult(1000, pylon.TimeoutHandling_Return)
 
@@ -311,8 +310,8 @@ class PylonDualCameraRecorder(QThread):
         finally:
             grab_result.Release()
 
+    @Trace.trace(logger)
     def run(self):
-        logger.debug("FUN PylonDualCameraRecorder.run")
         top_camera = self.top_camera
         front_camera = self.front_camera
 
@@ -403,19 +402,18 @@ class PylonDualCameraRecorder(QThread):
                 front_camera.video_buffer.close()
             if front_camera.grimace_buffer is not None:
                 front_camera.grimace_buffer.close()
-        logger.debug("FUNEND PylonDualCameraRecorder.run")
 
+    @Trace.trace(logger)
     def start(self, priority=QThread.Priority.InheritPriority):
-        logger.debug("FU PylonDualCameraRecorder.start")
         self.running = True
         super(PylonDualCameraRecorder, self).start(priority)
 
+    @Trace.trace(logger)
     def stop(self):
-        logger.debug("FU PylonDualCameraRecorder.stop")
         self.running = False
 
+    @Trace.trace(logger)
     def close(self):
-        logger.debug("FU PylonDualCameraRecorder.close")
         top_camera = self.top_camera
         if top_camera is not None:
             top_camera.camera.Close()

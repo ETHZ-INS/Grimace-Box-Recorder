@@ -1,3 +1,4 @@
+import random
 import time
 from typing import Tuple
 
@@ -12,13 +13,20 @@ from grimace.frame_cropper import FrameCropper
 from grimace.frame_quality_scorer import FrameQualityScorer
 from grimace.grimace_scorer import GrimaceScorer
 
+import logging
+
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_recorder.app.analysis.grimace_analyzer")
+
 
 class GrimaceAnalyzerV1(QueueReader):
     def __init__(self, frame_quality_scorer: FrameQualityScorer, frame_cropper: FrameCropper,
                  grimace_scorer: GrimaceScorer, input_buffer: QQueue,
                  output_buffer: QQueue[Tuple[int, float, np.ndarray]], output_list: QList,
                  batch_size: int = 16, min_score: float = 3.25 / 6, frames_per_interval: int = 1800):
-        super(GrimaceAnalyzerV1, self).__init__(input_buffer, wait_time=0.01)
+        logger.debug("FU GrimaceAnalyzerV1.__init__")
+        super(GrimaceAnalyzerV1, self).__init__(input_buffer, wait_time=0.01, raise_if_full=True)
 
         self.frame_quality_scorer = frame_quality_scorer
         self.frame_cropper = frame_cropper
@@ -35,6 +43,7 @@ class GrimaceAnalyzerV1(QueueReader):
         self.running_interval_scores = []
         self.running_batch = []
 
+    @Trace.trace(logger)
     def setup(self):
         self.running_interval_frames = []
         self.running_interval_scores = []
@@ -52,6 +61,7 @@ class GrimaceAnalyzerV1(QueueReader):
         self.running_interval_frames.extend(batch_frames)
         self.running_interval_scores.extend(batch_scores)
 
+    @Trace.trace(logger)
     def process_interval(self):
         interval_size = min(self.frames_per_interval, len(self.running_interval_frames))
 
@@ -60,11 +70,13 @@ class GrimaceAnalyzerV1(QueueReader):
         interval_scores = self.running_interval_scores[:interval_size]
         self.running_interval_scores = self.running_interval_scores[interval_size:]
 
+        tries = 50  # TODO: decide on a good number of tries or make it configurable
         while True:
-            # Try to crop the frame with the highest score until a frame can be cropped
+            # Try to crop the frame with the highest score until a frame can be cropped.
+            # Give up after 50 failed attempts
             max_score = max(interval_scores)
 
-            if max_score < self.min_score:
+            if max_score < self.min_score or tries <= 0:
                 self.output_list.append((None, None))
                 break
 
@@ -74,18 +86,24 @@ class GrimaceAnalyzerV1(QueueReader):
 
             cropped_frame = self.frame_cropper.crop(frame)
             if cropped_frame is None:
+                logger.warning("Failed to crop frame with index %s", max_score_index)
                 # If the frame could not be cropped, set the score to -1 to prevent it from being selected again
                 interval_scores[max_score_index] = -1
             else:
+                logger.info("Successfully cropped frame with index %s", max_score_index)
                 grimace_scores = self.grimace_scorer.score(cropped_frame)
 
                 self.output_list.append((cropped_frame, grimace_scores))
                 self.output_buffer.enqueue((frame_index, timestamp, grimace_scores))
                 break
+            tries -= 1
 
     def process_item(self, item):
         frame = item
         self.running_batch.append(frame)
+
+        #if random.random() < 0.01:
+        #    raise Exception("Bad luck in GrimaceAnalyzer")
 
         if len(self.running_batch) < self.batch_size:
             return
@@ -97,6 +115,7 @@ class GrimaceAnalyzerV1(QueueReader):
 
         self.process_interval()
 
+    @Trace.trace(logger)
     def then(self):
         if len(self.running_batch) > 0:
             self.process_batch()
@@ -105,5 +124,6 @@ class GrimaceAnalyzerV1(QueueReader):
         if len(self.running_interval_frames) > self.frames_per_interval * 0.9:
             self.process_interval()
 
+    @Trace.trace(logger)
     def close(self):
         self.output_buffer.close()

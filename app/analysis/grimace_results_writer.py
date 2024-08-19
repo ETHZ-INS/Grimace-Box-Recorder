@@ -7,8 +7,15 @@ import numpy as np
 from app.dataflow.qqueue import QQueue
 from app.dataflow.queue_reader import QueueReader
 
+import logging
+
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_recorder.app.analysis.grimace_results_writer")
+
 
 class GrimaceResultWriter(QueueReader):
+    @Trace.trace(logger)
     def __init__(self, target_file: Path, grimace_results_buffer: QQueue[Tuple[int, float, np.ndarray]]):
         super(GrimaceResultWriter, self).__init__(grimace_results_buffer, wait_time=1)
 
@@ -16,16 +23,22 @@ class GrimaceResultWriter(QueueReader):
 
         self.running = False
 
+    @Trace.trace(logger)
     def setup(self):
+        # The grimace results only come in like every 10 seconds, or even longer,
+        # so we just open the file when needed instead of keeping it open the whole time
         self.running = True
         with self.target_file.open("w+", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["frame_index", "timestamp", "eye", "nose", "cheek", "ear", "whisker", "average"])
 
+    @Trace.trace(logger)
     def process_item(self, item):
         frame_index, timestamp, grimace_scores = item
 
+        # grimace_scores is a numpy array containing the individual scores for the 5 AUs as integers
         grimace_scores = grimace_scores.astype(float)
+        # Grimace score 3 means the AU was unable to be scored, so set it to nan before calculating the mean
         grimace_scores[grimace_scores == 3] = np.nan
         avg_score = np.nanmean(grimace_scores)
 

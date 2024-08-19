@@ -9,14 +9,16 @@ from app.layout.configure_recording_dialog import Ui_DConfigureRecording
 
 import logging
 
+from util.trace import Trace
+
 logger = logging.getLogger("grimace_recorder.app.analysis.configure_recording_dialog")
 
 
 class ConfigureRecording(Ui_DConfigureRecording, QDialog):
     applied_signal = Signal(CameraConfig)
 
+    @Trace.trace(logger)
     def __init__(self, parent, recording_config: RecordingConfig):
-        logger.debug("FUN ConfigureRecording.__init__")
         super().__init__(parent)
         self.setupUi(self)
 
@@ -50,10 +52,9 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
         self.btn_apply.clicked.connect(self.apply)
 
         self.recording_mode_changed()
-        logger.debug("FUNEND ConfigureRecording.__init__")
 
-    def recording_mode_changed(self):
-        logger.debug("FU ConfigureRecording.recording_mode_changed")
+    @Trace.trace(logger)
+    def recording_mode_changed(self, *_):
         recording_mode = self.dpd_recording_mode.currentText()
         logger.info("Recording Mode Selected: %s", recording_mode)
         if recording_mode == "" or recording_mode is None:
@@ -66,29 +67,27 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
             self.tme_time.setReadOnly(True)
         self.recording_config.mode = recording_mode
 
-    def time_changed(self):
-        logger.debug("FU ConfigureRecording.time_changed")
+    @Trace.trace(logger)
+    def time_changed(self, *_):
         recording_duration = self.tme_time.time().msecsSinceStartOfDay() / 1000
         logger.info("Recording Duration Selected: %s", recording_duration)
         self.recording_config.duration = recording_duration
 
-    def codec_changed(self):
-        logger.debug("FU ConfigureRecording.codec_changed")
+    @Trace.trace(logger)
+    def codec_changed(self, *_):
         codec = self.dpd_codec.currentText()
         logger.info("Codec Selected: %s", codec)
         if codec == "" or codec is None:
             codec = None
         self.recording_config.codec = codec
 
+    @Trace.trace(logger)
     def apply(self):
-        logger.debug("FUN ConfigureRecording.apply")
         self.last_recording_config = replace(self.recording_config)
         self.applied_signal.emit(self.recording_config)
-        logger.debug("FUNEND ConfigureRecording.apply")
 
+    @Trace.trace(logger)
     def accept(self):
-        logger.debug("FUN ConfigureRecording.accept")
         if self.recording_config != self.last_recording_config:
             self.apply()
         super().accept()
-        logger.debug("FUNEND ConfigureRecording.accept")

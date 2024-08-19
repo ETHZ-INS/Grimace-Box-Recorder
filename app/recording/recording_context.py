@@ -2,12 +2,14 @@ import time
 
 import logging
 
+from util.trace import Trace
+
 logger = logging.getLogger("grimace_recorder.app.recording.recording_context")
 
 
 class RecordingContext:
+    @Trace.trace(logger)
     def __init__(self, recording_duration: float = None):
-        logger.debug("FU RecordingContext.__init__")
         super(RecordingContext, self).__init__()
 
         self.recording_duration = recording_duration
@@ -28,15 +30,15 @@ class RecordingContext:
     def set_latest_time(self, latest_time: float):
         self.latest_time = latest_time
 
+    @Trace.trace(logger)
     def start(self, start_time: float = None):
-        logger.debug("FU RecordingContext.start")
         self.started = True
         self.recording = True
         self.start_time = start_time if start_time is not None else time.time()
         self.stop_time = None
 
+    @Trace.trace(logger)
     def stop(self, stop_time: float = None):
-        logger.debug("FU RecordingContext.stop")
         if not self.started or not self.recording:
             return
         self.stop_time = stop_time if stop_time is not None else self.latest_time

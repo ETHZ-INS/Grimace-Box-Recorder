@@ -1,3 +1,4 @@
+:: The pyinstaller command is provided by the pyinstaller Python module, so the command needs to be executed inside the conda environment
 call conda activate GrimaceRecorder
 pyinstaller^
  --add-data "C:\Users\Me\anaconda3\envs\GrimaceRecorder\Lib\site-packages\ultralytics\cfg\default.yaml;./ultralytics/cfg"^

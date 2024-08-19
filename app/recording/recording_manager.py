@@ -19,7 +19,7 @@ from app.config.video_files import VideoFilesConfig
 from app.dataflow.qlist import QList
 from app.dataflow.qqueue import QQueue
 from app.dataflow.qvariable import QVariable
-from app.recording.dual_video_recorder import PylonDualCameraRecorder
+from app.recording.new_dual_video_recorder import DualCameraRecorder, build_camera_source
 from app.recording.recording_context import RecordingContext
 from app.recording.video_writer import BufferVideoWriter
 from grimace.frame_cropper import FrameCropper
@@ -30,6 +30,9 @@ from grimace.grimace_scorer import GrimaceScorer
 from grimace.grimace_scorer_model import GrimaceScoreModel
 
 import logging
+
+from grimace.pose_model import PoseModel
+from util.trace import Trace
 
 logger = logging.getLogger("grimace_recorder.app.recording.recording_manager")
 
@@ -45,7 +48,8 @@ demo_model_files = {
 super_scorer_model_files = {
     "frame_quality": models_folder / "frame_quality.pt",
     "face_cropper": models_folder / "face_cropper.pt",
-    "grimace_scorer": models_folder / "grimace_scorer.pt"
+    "grimace_scorer": models_folder / "grimace_scorer.pt",
+    "top_pose_estimator": models_folder / "top_pose_estimator.pt",
 }
 
 # TODO: After loading config, ready to record despite cameras not found
@@ -62,8 +66,8 @@ class RecordingManager(QObject):
     top_camera_error_signal = Signal(str)
     front_camera_error_signal = Signal(str)
 
+    @Trace.trace(logger)
     def __init__(self, preview_buffer_top: QVariable, preview_buffer_front: QVariable):
-        logger.debug("FUN RecordingManager.__init__")
         super().__init__()
         self.preview_buffer_top = preview_buffer_top
         self.preview_buffer_front = preview_buffer_front
@@ -85,8 +89,9 @@ class RecordingManager(QObject):
         self.frame_quality_scorer = None
         self.face_cropper = None
         self.grimace_scorer = None
+        self.top_pose_estimator = None
 
-        self.camera_recorder = PylonDualCameraRecorder()
+        self.camera_recorder = DualCameraRecorder()
         self.camera_recorder.setPriority(QThread.Priority.HighestPriority)
         self.camera_recorder.stop_signal.connect(self.stop_recording)
         self.camera_recorder.top_error_signal.connect(self.on_top_camera_error)
@@ -117,10 +122,9 @@ class RecordingManager(QObject):
         self.recording_error: Optional[str] = None
         self.analysis_error: Optional[str] = None
         self.warnings: Dict[str, str] = {}
-        logger.debug("FUNEND RecordingManager.__init__")
 
+    @Trace.trace(logger)
     def find_next_recording_number(self, target_directory: str, templates: List[str], timestamp: str, start: int = 1) -> int:
-        logger.debug("FUN RecordingManager.find_next_recording_number")
         if start is None:
             start = 1
 
@@ -135,7 +139,6 @@ class RecordingManager(QObject):
                     break
             else:
                 break
-        logger.debug("FUNEND RecordingManager.find_next_recording_number")
         return recording_number
 
     def construct_file(self, target_directory: str, template: str, recording_number: int, timestamp: str) -> str:
@@ -143,8 +146,8 @@ class RecordingManager(QObject):
         video_file = Path(target_directory) / filename
         return str(video_file)
 
+    @Trace.trace(logger)
     def construct_files(self, video_files_config: VideoFilesConfig) -> Tuple:
-        logger.debug("FUN RecordingManager.construct_files")
         naming_mode = video_files_config.naming_mode
         target_directory = video_files_config.target_directory
         if naming_mode is None or target_directory is None:
@@ -192,11 +195,10 @@ class RecordingManager(QObject):
             front_timestamps_file = self.construct_file(target_directory, front_timestamps_template,
                                                         recording_number, timestamp)
 
-        logger.debug("FUNEND RecordingManager.construct_files")
         return top_video_file, front_video_file, grimace_results_file, top_timestamps_file, front_timestamps_file
 
+    @Trace.trace(logger)
     def configure_video_files(self, video_files_config: Optional[VideoFilesConfig]):
-        logger.debug("FUN RecordingManager.configure_video_files")
         self.video_files_config = deepcopy(video_files_config)
 
         files = self.construct_files(video_files_config)
@@ -210,51 +212,59 @@ class RecordingManager(QObject):
         logger.info("Setting front_timestamps_file=%s", self.front_timestamps_file)
 
         self.overview_changed_signal.emit()
-        logger.debug("FUNEND RecordingManager.configure_video_files")
 
+    @Trace.trace(logger)
     def configure_top_camera(self, camera_config: Optional[CameraConfig], start: bool = True):
-        logger.debug("FUN RecordingManager.configure_top_camera")
         self.camera_top_config = deepcopy(camera_config)
         logger.info("Setting Camera Top Config: %s", self.camera_top_config)
 
-        if camera_config.camera_id is None:
-            self.camera_recorder.set_top_camera(None)
-        else:
+        camera_ready = True
+        if camera_config.camera_type == "Pylon" and camera_config.camera_id is None:
+            camera_ready = False
+        elif camera_config.camera_type == "Video File" and camera_config.video_file is None:
+            camera_ready = False
+
+        if camera_ready:
+            source = build_camera_source(camera_config)
             self.camera_recorder.set_top_camera(
-                camera_config.camera_id, fps=camera_config.fps,
-                config_file=camera_config.config_file, start=start
+                source, start=start
             )
             self.camera_recorder.top_camera.set_preview_buffer(self.preview_buffer_top)
+        else:
+            self.camera_recorder.set_top_camera(None)
 
         self.overview_changed_signal.emit()
-        logger.debug("FUNEND RecordingManager.configure_top_camera")
 
+    @Trace.trace(logger)
     def configure_front_camera(self, camera_config: Optional[CameraConfig], start: bool = True):
-        logger.debug("FUN RecordingManager.configure_front_camera")
         self.camera_front_config = deepcopy(camera_config)
         logger.info("Setting Camera Front Config: %s", self.camera_front_config)
 
-        if camera_config.camera_id is None:
-            self.camera_recorder.set_front_camera(None)
-        else:
+        camera_ready = True
+        if camera_config.camera_type == "Pylon" and camera_config.camera_id is None:
+            camera_ready = False
+        elif camera_config.camera_type == "Video File" and camera_config.video_file is None:
+            camera_ready = False
+
+        if camera_ready:
+            source = build_camera_source(camera_config)
             self.camera_recorder.set_front_camera(
-                camera_config.camera_id, fps=camera_config.fps,
-                config_file=camera_config.config_file, start=start
+                source, start=start
             )
             self.camera_recorder.front_camera.set_preview_buffer(self.preview_buffer_front)
+        else:
+            self.camera_recorder.set_front_camera(None)
 
         self.overview_changed_signal.emit()
-        logger.debug("FUNEND RecordingManager.configure_front_camera")
 
+    @Trace.trace(logger)
     def configure_recording(self, recording_config: RecordingConfig):
-        logger.debug("FUN RecordingManager.configure_recording")
         self.recording_config = deepcopy(recording_config)
         logger.info("Setting Recording Config: %s", self.recording_config)
         self.overview_changed_signal.emit()
-        logger.debug("FUNEND RecordingManager.configure_recording")
 
+    @Trace.trace(logger)
     def configure_grimace(self, grimace_config: GrimaceConfig):
-        logger.debug("FUN RecordingManager.configure_grimace")
         self.grimace_config = deepcopy(grimace_config)
         logger.info("Setting Analysis Config: %s", self.grimace_config)
 
@@ -278,6 +288,7 @@ class RecordingManager(QObject):
                 face_cropper_model_base = YOLO(model_files["face_cropper"])
                 face_cropper_model_base.to(grimace_config.face_cropper_device)
                 face_cropper_model = FrameCropperModel(face_cropper_model_base, device=grimace_config.face_cropper_device)
+                # TODO: Decide on confidence threshold or make it configurable
                 self.face_cropper = FrameCropper(face_cropper_model, padding=0.05, confidence_threshold=0.9)
             else:
                 self.face_cropper = None
@@ -289,31 +300,42 @@ class RecordingManager(QObject):
                 self.grimace_scorer = GrimaceScorer(grimace_scorer_model)
             else:
                 self.grimace_scorer = None
+
+            #top_pose_estimator_model_base = YOLO(model_files["top_pose_estimator"])
+            #top_pose_estimator_model_base.to(grimace_config.face_cropper_device)
+            #self.top_pose_estimator = PoseModel(top_pose_estimator_model_base, device="cuda")
+            #self.camera_recorder.top_pose_estimator = self.top_pose_estimator
         else:
             self.frame_quality_scorer = None
             self.face_cropper = None
             self.grimace_scorer = None
 
         self.overview_changed_signal.emit()
-        logger.debug("FUNEND RecordingManager.configure_grimace")
 
+    @Trace.trace(logger)
     def reset_error(self):
-        logger.debug("FU RecordingManager.reset_error")
         self.recording_error = None
         self.analysis_error = None
 
     def get_not_ready_reason(self) -> Optional[str]:
+        if self.recording_number is None:
+            return "Recording number not set"
+
         if self.camera_top_config is None:
             return "Top camera not configured"
 
         if self.camera_front_config is None:
             return "Front camera not configured"
 
-        if self.camera_top_config.camera_id is None:
+        if self.camera_top_config.camera_type == "Pylon" and self.camera_top_config.camera_id is None:
             return "Top camera device not selected"
+        elif self.camera_top_config.camera_type == "Video File" and self.camera_top_config.video_file is None:
+            return "Top video file not selected"
 
-        if self.camera_front_config.camera_id is None:
+        if self.camera_front_config.camera_type == "Pylon" and self.camera_front_config.camera_id is None:
             return "Front camera device not selected"
+        elif self.camera_front_config.camera_type == "Video File" and self.camera_front_config.video_file is None:
+            return "Front video file not selected"
 
         if self.recording_config is None:
             return "Recording not configured"
@@ -479,8 +501,8 @@ class RecordingManager(QObject):
             elif grimace_input_buffer_fill_level > 0.99 or grimace_output_buffer_fill_level > 0.99:
                 self.on_analysis_error("Grimace analysis buffer almost full - stopping analysis to save resources")
 
+    @Trace.trace(logger)
     def prepare_recording(self):
-        logger.debug("FUN RecordingManager.prepare_recording")
         self.configure_video_files(self.video_files_config)
 
         fourcc = cv2.VideoWriter.fourcc(*self.recording_config.codec)
@@ -511,7 +533,7 @@ class RecordingManager(QObject):
             self.grimace_analyzer = GrimaceAnalyzerV1(self.frame_quality_scorer, self.face_cropper, self.grimace_scorer,
                                                       self.grimace_input_buffer, self.grimace_output_buffer,
                                                       self.grimace_results_list,
-                                                      batch_size=16, min_score=1.25 / 6,
+                                                      batch_size=16, min_score=4.75 / 6,
                                                       frames_per_interval=frames_per_interval)
 
             self.grimace_results_writer = GrimaceResultWriter(Path(self.grimace_results_file),
@@ -524,10 +546,9 @@ class RecordingManager(QObject):
         self.recording_context = RecordingContext(recording_duration)
 
         self.overview_changed_signal.emit()
-        logger.debug("FUNEND RecordingManager.prepare_recording")
 
+    @Trace.trace(logger)
     def start_preview(self):
-        logger.debug("FUN RecordingManager.start_preview")
         if self.recording_running:
             return
 
@@ -537,10 +558,9 @@ class RecordingManager(QObject):
 
         if self.camera_recorder.top_camera is not None or self.camera_recorder.front_camera is not None:
             self.camera_recorder.start()
-        logger.debug("FUNEND RecordingManager.start_preview")
 
+    @Trace.trace(logger)
     def start_recording(self):
-        logger.debug("FUN RecordingManager.start_recording")
         self.analysis_error = None
         self.recording_error = None
         self.warnings = {}
@@ -576,10 +596,9 @@ class RecordingManager(QObject):
 
         self.overview_changed_signal.emit()
         self.recording_started_signal.emit()
-        logger.debug("FUNEND RecordingManager.start_recording")
 
+    @Trace.trace(logger)
     def stop_recording(self, start_preview: bool = True):
-        logger.debug("FUN RecordingManager.stop_recording")
         if not self.recording_running:
             return
 
@@ -609,24 +628,21 @@ class RecordingManager(QObject):
 
         self.overview_changed_signal.emit()
         self.recording_stopped_signal.emit()
-        logger.debug("FUNEND RecordingManager.stop_recording")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_recording_error(self, error: str):
-        logger.warning("FUN RecordingManager.on_recording_error")
         self.force_stop_recording()
         self.recording_error = error
         self.recording_error_signal.emit(error)
-        logger.warning("FUNEND RecordingManager.on_recording_error")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_analysis_error(self, error: str):
-        logger.warning("FUN RecordingManager.on_analysis_error")
         self.force_stop_analysis()
         self.analysis_error = error
         self.analysis_error_signal.emit(error)
-        logger.warning("FUNEND RecordingManager.on_analysis_error")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_top_camera_error(self, error: str):
-        logger.warning("FUN RecordingManager.on_top_camera_error")
         if self.recording_running:
             self.force_stop_recording(kick_top_camera=True)
             self.recording_error = "Top Camera Error: " + error
@@ -634,10 +650,9 @@ class RecordingManager(QObject):
         else:
             self.force_stop_recording(kick_top_camera=True)
         self.top_camera_error_signal.emit(error)
-        logger.warning("FUNEND RecordingManager.on_top_camera_error")
-        
+
+    @Trace.trace(logger, level=logging.WARNING)
     def on_front_camera_error(self, error: str):
-        logger.warning("FUN RecordingManager.on_front_camera_error")
         if self.recording_running:
             self.force_stop_recording(kick_front_camera=True)
             self.recording_error = "Front Camera Error: " + error
@@ -645,10 +660,9 @@ class RecordingManager(QObject):
         else:
             self.force_stop_recording(kick_front_camera=True)
         self.front_camera_error_signal.emit(error)
-        logger.warning("FUNEND RecordingManager.on_front_camera_error")
 
+    @Trace.trace(logger, level=logging.WARNING)
     def force_stop_analysis(self):
-        logger.warning("FUN RecordingManager.force_stop_analysis")
         # Only stop grimace analysis so the recording, which is much more important, may still be able to finish
         if self.grimace_analyzer is not None:
             self.grimace_analyzer.stop()
@@ -663,8 +677,7 @@ class RecordingManager(QObject):
             self.grimace_output_buffer.set_void()
 
         self.analysis_running = False
-        logger.warning("FUNEND RecordingManager.force_stop_analysis")
-        
+
     def kick_top_camera(self):
         top_camera_config = deepcopy(self.camera_top_config)
         top_camera_config.camera_id = None
@@ -676,20 +689,20 @@ class RecordingManager(QObject):
         self.configure_front_camera(front_camera_config, start=False)
         
 
+    @Trace.trace(logger, level=logging.WARNING)
     def force_stop_recording(self, kick_top_camera: bool = False, kick_front_camera: bool = False, start_preview: bool = True):
-        logger.warning("FUN RecordingManager.force_stop_recording")
         if self.camera_recorder is not None:
             self.camera_recorder.stop()
-        
+
         if self.top_video_writer is not None:
             self.top_video_writer.stop()
-            
+
         if self.front_video_writer is not None:
             self.front_video_writer.stop()
 
         if self.grimace_analyzer is not None:
             self.grimace_analyzer.stop()
-            
+
         if self.grimace_results_writer is not None:
             self.grimace_results_writer.stop()
 
@@ -698,16 +711,16 @@ class RecordingManager(QObject):
 
         if self.camera_recorder is not None:
             self.camera_recorder.wait()
-        
+
         if self.top_video_writer is not None:
             self.top_video_writer.wait()
-            
+
         if self.front_video_writer is not None:
             self.front_video_writer.wait()
 
         if self.grimace_analyzer is not None:
             self.grimace_analyzer.wait()
-            
+
         if self.grimace_results_writer is not None:
             self.grimace_results_writer.wait()
 
@@ -734,7 +747,7 @@ class RecordingManager(QObject):
                 self.configure_top_camera(self.camera_top_config)
             except Exception as e:
                 self.on_top_camera_error(str(e))
-        
+
         if kick_front_camera:
             self.kick_front_camera()
         else:
@@ -747,4 +760,3 @@ class RecordingManager(QObject):
 
         if start_preview:
             self.start_preview()
-        logger.warning("FUNEND RecordingManager.force_stop_recording")

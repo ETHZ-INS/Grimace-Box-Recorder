@@ -7,12 +7,14 @@ from app.dataflow.queue_reader import QueueReader
 
 import logging
 
+from util.trace import Trace
+
 logger = logging.getLogger("grimace_recorder.app.recording.video_writer")
 
 
 class BufferVideoWriter(QueueReader):
+    @Trace.trace(logger)
     def __init__(self, video_writer: cv2.VideoWriter, video_buffer: QQueue, timestamp_file: Path = None):
-        logger.debug("FU BufferVideoWriter.__init__")
         super(BufferVideoWriter, self).__init__(video_buffer, wait_time=0.01)
 
         self.video_writer = video_writer
@@ -20,8 +22,8 @@ class BufferVideoWriter(QueueReader):
 
         self.timestamp_file_handle = None
 
+    @Trace.trace(logger)
     def setup(self):
-        logger.debug("FU BufferVideoWriter.setup")
         if self.timestamp_file is not None:
             self.timestamp_file_handle = self.timestamp_file.open("w+")
             self.timestamp_file_handle.write("frame_index,timestamp\n")
@@ -32,8 +34,8 @@ class BufferVideoWriter(QueueReader):
         if self.timestamp_file_handle is not None:
             self.timestamp_file_handle.write(f"{frame_index},{timestamp}\n")
 
+    @Trace.trace(logger)
     def close(self):
-        logger.debug("FU BufferVideoWriter.close")
         if self.timestamp_file_handle is not None:
             self.timestamp_file_handle.close()
         self.video_writer.release()

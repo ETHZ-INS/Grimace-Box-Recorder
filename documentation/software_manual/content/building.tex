@@ -1,5 +1,21 @@
 \subsection{Compiling the UI}
-TODO
+The graphical user interface of the Grimace Box recording application was designed using QT Designer.
+The \verb!.ui! files produced by QT Designer need to be converted to Python files.
+The newest versions of the python files are uploaded to the Github repository alongside the rest of the code,
+so you only need to regenerate them if you have edited the \verb!.ui! files.
+
+To do this, you can run the \verb!compile_ui.bat! batch script to convert all \verb!.ui! files
+or use the \verb!pyside6-uic! command to convert individual files.
+The \verb!.ui! files are located in the \verb!ui! folder,
+the generated python files are placed in the \verb!app/layout! folder.
 
 \subsection{Building the Executable}
-TODO
+To deploy the application to a client system, it needs to be compiled to an executable (\verb!.exe!) file.
+This is done using \verb!pyinstaller!, which packs the python code together with all
+required libraries and a Python interpreter inside an executable file.
+
+To create the executable, you can run the \verb!build_application.bat! batch script.
+A folder called ``\verb!dist/Grimace Box!'' is created, which contains the executable file as well as a
+folder called \verb!_internal!, containing the python interpreter, libraries and additional files.
+The executable file only works if it is in the same location as the \verb!_internal! folder.
+If you want to move the executable file, you need to move the entire ``\verb!Grimace Box!'' folder.

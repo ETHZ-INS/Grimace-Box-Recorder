@@ -18,21 +18,21 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
     QDialogButtonBox, QDoubleSpinBox, QFormLayout, QFrame,
     QHBoxLayout, QLabel, QLayout, QSizePolicy,
-    QToolButton, QVBoxLayout, QWidget)
+    QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 
 class Ui_DConfigureCamera(object):
     def setupUi(self, DConfigureCamera):
         if not DConfigureCamera.objectName():
             DConfigureCamera.setObjectName(u"DConfigureCamera")
         DConfigureCamera.setWindowModality(Qt.NonModal)
-        DConfigureCamera.resize(400, 200)
+        DConfigureCamera.resize(400, 260)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(DConfigureCamera.sizePolicy().hasHeightForWidth())
         DConfigureCamera.setSizePolicy(sizePolicy)
-        DConfigureCamera.setMinimumSize(QSize(400, 200))
-        DConfigureCamera.setMaximumSize(QSize(800, 200))
+        DConfigureCamera.setMinimumSize(QSize(400, 260))
+        DConfigureCamera.setMaximumSize(QSize(800, 260))
         self.verticalLayout = QVBoxLayout(DConfigureCamera)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setSizeConstraint(QLayout.SetMinAndMaxSize)
@@ -46,7 +46,41 @@ class Ui_DConfigureCamera(object):
 
         self.verticalLayout.addWidget(self.lbl_title)
 
-        self.frame = QFrame(DConfigureCamera)
+        self.frm_camera_type = QFrame(DConfigureCamera)
+        self.frm_camera_type.setObjectName(u"frm_camera_type")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.frm_camera_type.sizePolicy().hasHeightForWidth())
+        self.frm_camera_type.setSizePolicy(sizePolicy2)
+        self.frm_camera_type.setFrameShape(QFrame.StyledPanel)
+        self.frm_camera_type.setFrameShadow(QFrame.Raised)
+        self.formLayout_2 = QFormLayout(self.frm_camera_type)
+        self.formLayout_2.setObjectName(u"formLayout_2")
+        self.label_4 = QLabel(self.frm_camera_type)
+        self.label_4.setObjectName(u"label_4")
+
+        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.label_4)
+
+        self.dpd_camera_type = QComboBox(self.frm_camera_type)
+        self.dpd_camera_type.addItem("")
+        self.dpd_camera_type.addItem("")
+        self.dpd_camera_type.setObjectName(u"dpd_camera_type")
+
+        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.dpd_camera_type)
+
+
+        self.verticalLayout.addWidget(self.frm_camera_type)
+
+        self.stk_camera = QStackedWidget(DConfigureCamera)
+        self.stk_camera.setObjectName(u"stk_camera")
+        self.page_pylon_camera = QWidget()
+        self.page_pylon_camera.setObjectName(u"page_pylon_camera")
+        self.verticalLayout_2 = QVBoxLayout(self.page_pylon_camera)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.frame = QFrame(self.page_pylon_camera)
         self.frame.setObjectName(u"frame")
         self.frame.setFrameShape(QFrame.StyledPanel)
         self.frame.setFrameShadow(QFrame.Raised)
@@ -76,15 +110,15 @@ class Ui_DConfigureCamera(object):
         self.frame_2.setFrameShadow(QFrame.Raised)
         self.horizontalLayout = QHBoxLayout(self.frame_2)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.lbl_selected_file = QLabel(self.frame_2)
-        self.lbl_selected_file.setObjectName(u"lbl_selected_file")
+        self.lbl_selected_config_file = QLabel(self.frame_2)
+        self.lbl_selected_config_file.setObjectName(u"lbl_selected_config_file")
 
-        self.horizontalLayout.addWidget(self.lbl_selected_file)
+        self.horizontalLayout.addWidget(self.lbl_selected_config_file)
 
-        self.btn_select_file = QToolButton(self.frame_2)
-        self.btn_select_file.setObjectName(u"btn_select_file")
+        self.btn_select_config_file = QToolButton(self.frame_2)
+        self.btn_select_config_file.setObjectName(u"btn_select_config_file")
 
-        self.horizontalLayout.addWidget(self.btn_select_file)
+        self.horizontalLayout.addWidget(self.btn_select_config_file)
 
 
         self.formLayout.setWidget(1, QFormLayout.FieldRole, self.frame_2)
@@ -103,7 +137,51 @@ class Ui_DConfigureCamera(object):
         self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_2)
 
 
-        self.verticalLayout.addWidget(self.frame)
+        self.verticalLayout_2.addWidget(self.frame)
+
+        self.stk_camera.addWidget(self.page_pylon_camera)
+        self.page_file_camera = QWidget()
+        self.page_file_camera.setObjectName(u"page_file_camera")
+        self.horizontalLayout_2 = QHBoxLayout(self.page_file_camera)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.frame_4 = QFrame(self.page_file_camera)
+        self.frame_4.setObjectName(u"frame_4")
+        self.frame_4.setFrameShape(QFrame.StyledPanel)
+        self.frame_4.setFrameShadow(QFrame.Raised)
+        self.formLayout_3 = QFormLayout(self.frame_4)
+        self.formLayout_3.setObjectName(u"formLayout_3")
+        self.label_5 = QLabel(self.frame_4)
+        self.label_5.setObjectName(u"label_5")
+        self.label_5.setMinimumSize(QSize(0, 44))
+
+        self.formLayout_3.setWidget(0, QFormLayout.LabelRole, self.label_5)
+
+        self.frame_5 = QFrame(self.frame_4)
+        self.frame_5.setObjectName(u"frame_5")
+        self.frame_5.setFrameShape(QFrame.StyledPanel)
+        self.frame_5.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_3 = QHBoxLayout(self.frame_5)
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.lbl_selected_video_file = QLabel(self.frame_5)
+        self.lbl_selected_video_file.setObjectName(u"lbl_selected_video_file")
+
+        self.horizontalLayout_3.addWidget(self.lbl_selected_video_file)
+
+        self.btn_select_video_file = QToolButton(self.frame_5)
+        self.btn_select_video_file.setObjectName(u"btn_select_video_file")
+
+        self.horizontalLayout_3.addWidget(self.btn_select_video_file)
+
+
+        self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.frame_5)
+
+
+        self.horizontalLayout_2.addWidget(self.frame_4)
+
+        self.stk_camera.addWidget(self.page_file_camera)
+
+        self.verticalLayout.addWidget(self.stk_camera)
 
         self.btnbox_buttons = QDialogButtonBox(DConfigureCamera)
         self.btnbox_buttons.setObjectName(u"btnbox_buttons")
@@ -117,6 +195,7 @@ class Ui_DConfigureCamera(object):
         self.btnbox_buttons.accepted.connect(DConfigureCamera.accept)
         self.btnbox_buttons.rejected.connect(DConfigureCamera.reject)
 
+        self.stk_camera.setCurrentIndex(0)
         self.dpd_camera.setCurrentIndex(-1)
 
 
@@ -126,16 +205,23 @@ class Ui_DConfigureCamera(object):
     def retranslateUi(self, DConfigureCamera):
         DConfigureCamera.setWindowTitle(QCoreApplication.translate("DConfigureCamera", u"Configure Top Camera", None))
         self.lbl_title.setText(QCoreApplication.translate("DConfigureCamera", u"Configure Top Camera", None))
+        self.label_4.setText(QCoreApplication.translate("DConfigureCamera", u"Camera Type:", None))
+        self.dpd_camera_type.setItemText(0, QCoreApplication.translate("DConfigureCamera", u"Pylon", None))
+        self.dpd_camera_type.setItemText(1, QCoreApplication.translate("DConfigureCamera", u"Video File", None))
+
         self.label.setText(QCoreApplication.translate("DConfigureCamera", u"Camera:", None))
         self.dpd_camera.setItemText(0, QCoreApplication.translate("DConfigureCamera", u"3423423", None))
         self.dpd_camera.setItemText(1, QCoreApplication.translate("DConfigureCamera", u"2345352", None))
 
         self.dpd_camera.setCurrentText("")
         self.label_3.setText(QCoreApplication.translate("DConfigureCamera", u"Config File:", None))
-        self.lbl_selected_file.setText(QCoreApplication.translate("DConfigureCamera", u"No File Selected", None))
-        self.btn_select_file.setText(QCoreApplication.translate("DConfigureCamera", u"...", None))
+        self.lbl_selected_config_file.setText(QCoreApplication.translate("DConfigureCamera", u"No File Selected", None))
+        self.btn_select_config_file.setText(QCoreApplication.translate("DConfigureCamera", u"...", None))
         self.spb_fps.setPrefix("")
         self.spb_fps.setSuffix("")
         self.label_2.setText(QCoreApplication.translate("DConfigureCamera", u"FPS:", None))
+        self.label_5.setText(QCoreApplication.translate("DConfigureCamera", u"Video File:", None))
+        self.lbl_selected_video_file.setText(QCoreApplication.translate("DConfigureCamera", u"No File Selected", None))
+        self.btn_select_video_file.setText(QCoreApplication.translate("DConfigureCamera", u"...", None))
     # retranslateUi
 

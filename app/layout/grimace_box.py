@@ -18,14 +18,15 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
     QLayout, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QSizePolicy, QStatusBar, QVBoxLayout,
-    QWidget)
+    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
+    QTabWidget, QVBoxLayout, QWidget)
 
 class Ui_WGrimaceBox(object):
     def setupUi(self, WGrimaceBox):
         if not WGrimaceBox.objectName():
             WGrimaceBox.setObjectName(u"WGrimaceBox")
         WGrimaceBox.resize(1235, 803)
+        WGrimaceBox.setTabShape(QTabWidget.Rounded)
         self.action_save_project = QAction(WGrimaceBox)
         self.action_save_project.setObjectName(u"action_save_project")
         self.action_load_project = QAction(WGrimaceBox)
@@ -108,6 +109,14 @@ class Ui_WGrimaceBox(object):
 
         self.horizontalLayout_3.addWidget(self.frame_4)
 
+        self.horizontalSpacer = QSpacerItem(0, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
+
         self.frame_5 = QFrame(self.frame_2)
         self.frame_5.setObjectName(u"frame_5")
         sizePolicy1.setHeightForWidth(self.frame_5.sizePolicy().hasHeightForWidth())
@@ -158,14 +167,46 @@ class Ui_WGrimaceBox(object):
 
         self.horizontalLayout.addWidget(self.lbl_overview)
 
-        self.lbl_warnings = QLabel(self.frame_3)
+        self.frame_6 = QFrame(self.frame_3)
+        self.frame_6.setObjectName(u"frame_6")
+        self.frame_6.setFrameShape(QFrame.NoFrame)
+        self.frame_6.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_4 = QVBoxLayout(self.frame_6)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.verticalLayout_4.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.lbl_warnings = QLabel(self.frame_6)
         self.lbl_warnings.setObjectName(u"lbl_warnings")
-        self.lbl_warnings.setStyleSheet(u"color: orange")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.lbl_warnings.sizePolicy().hasHeightForWidth())
+        self.lbl_warnings.setSizePolicy(sizePolicy3)
+        self.lbl_warnings.setStyleSheet(u"")
         self.lbl_warnings.setFrameShadow(QFrame.Plain)
         self.lbl_warnings.setTextFormat(Qt.MarkdownText)
         self.lbl_warnings.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
 
-        self.horizontalLayout.addWidget(self.lbl_warnings)
+        self.verticalLayout_4.addWidget(self.lbl_warnings)
+
+        self.lbl_debug_mode = QLabel(self.frame_6)
+        self.lbl_debug_mode.setObjectName(u"lbl_debug_mode")
+        self.lbl_debug_mode.setEnabled(True)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.lbl_debug_mode.sizePolicy().hasHeightForWidth())
+        self.lbl_debug_mode.setSizePolicy(sizePolicy4)
+        self.lbl_debug_mode.setMinimumSize(QSize(0, 20))
+        self.lbl_debug_mode.setMaximumSize(QSize(16777215, 400))
+        self.lbl_debug_mode.setStyleSheet(u"color: orange;\n"
+"font: 700 16pt \"Segoe UI\";")
+        self.lbl_debug_mode.setScaledContents(False)
+        self.lbl_debug_mode.setAlignment(Qt.AlignBottom|Qt.AlignRight|Qt.AlignTrailing)
+
+        self.verticalLayout_4.addWidget(self.lbl_debug_mode)
+
+
+        self.horizontalLayout.addWidget(self.frame_6)
 
 
         self.verticalLayout.addWidget(self.frame_3)
@@ -183,30 +224,27 @@ class Ui_WGrimaceBox(object):
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.btn_record = QPushButton(self.frame)
         self.btn_record.setObjectName(u"btn_record")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.btn_record.sizePolicy().hasHeightForWidth())
-        self.btn_record.setSizePolicy(sizePolicy3)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.btn_record.sizePolicy().hasHeightForWidth())
+        self.btn_record.setSizePolicy(sizePolicy5)
         self.btn_record.setMinimumSize(QSize(0, 0))
 
         self.horizontalLayout_2.addWidget(self.btn_record)
 
         self.lbl_message = QLabel(self.frame)
         self.lbl_message.setObjectName(u"lbl_message")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.lbl_message.sizePolicy().hasHeightForWidth())
-        self.lbl_message.setSizePolicy(sizePolicy4)
+        sizePolicy3.setHeightForWidth(self.lbl_message.sizePolicy().hasHeightForWidth())
+        self.lbl_message.setSizePolicy(sizePolicy3)
         self.lbl_message.setAlignment(Qt.AlignCenter)
 
         self.horizontalLayout_2.addWidget(self.lbl_message)
 
         self.lbl_time = QLabel(self.frame)
         self.lbl_time.setObjectName(u"lbl_time")
-        sizePolicy3.setHeightForWidth(self.lbl_time.sizePolicy().hasHeightForWidth())
-        self.lbl_time.setSizePolicy(sizePolicy3)
+        sizePolicy5.setHeightForWidth(self.lbl_time.sizePolicy().hasHeightForWidth())
+        self.lbl_time.setSizePolicy(sizePolicy5)
         self.lbl_time.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.horizontalLayout_2.addWidget(self.lbl_time)
@@ -226,11 +264,11 @@ class Ui_WGrimaceBox(object):
         self.menuRecording.setToolTipsVisible(True)
         self.menu_configure_cameras = QMenu(self.menuRecording)
         self.menu_configure_cameras.setObjectName(u"menu_configure_cameras")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy5.setHorizontalStretch(2)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.menu_configure_cameras.sizePolicy().hasHeightForWidth())
-        self.menu_configure_cameras.setSizePolicy(sizePolicy5)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy6.setHorizontalStretch(2)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.menu_configure_cameras.sizePolicy().hasHeightForWidth())
+        self.menu_configure_cameras.setSizePolicy(sizePolicy6)
         self.menu_configure_cameras.setToolTipsVisible(True)
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
@@ -333,6 +371,7 @@ class Ui_WGrimaceBox(object):
 "Front Video Filename: front_1.avi  \n"
 "", None))
         self.lbl_warnings.setText("")
+        self.lbl_debug_mode.setText(QCoreApplication.translate("WGrimaceBox", u"Debug Mode", None))
 #if QT_CONFIG(tooltip)
         self.btn_record.setToolTip("")
 #endif // QT_CONFIG(tooltip)
