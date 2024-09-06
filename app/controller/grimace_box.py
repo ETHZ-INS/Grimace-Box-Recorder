@@ -157,7 +157,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def update_menubar(self):
-        actions_enabled = not self.recording_manager.recording_running
+        actions_enabled = not (self.recording_manager.recording is not None and self.recording_manager.recording.running)
         self.action_configure_top_camera.setEnabled(actions_enabled)
         self.action_configure_front_camera.setEnabled(actions_enabled)
         self.menu_configure_cameras.setEnabled(actions_enabled)
@@ -174,7 +174,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         self.btn_record.setEnabled(message is None)
 
-        if self.recording_manager.recording_running:
+        if self.recording_manager.recording is not None and self.recording_manager.recording.running:
             self.btn_record.setText("Stop Recording")
         else:
             self.btn_record.setText("Start Recording")
@@ -233,10 +233,10 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.lbl_video_top.setPixmap(frame)
 
     def on_video_frame_front(self):
-        if self.recording_manager.recording_context:
+        if self.recording_manager.recording.recording_context:
             recording_time = 0.0
-            if self.recording_manager.recording_context.started:
-                recording_time = self.recording_manager.recording_context.recording_time()
+            if self.recording_manager.recording.recording_context.started:
+                recording_time = self.recording_manager.recording.recording_context.recording_time()
 
             recording_time_string = str(timedelta(seconds=recording_time))
             self.lbl_time.setText(recording_time_string)
@@ -257,7 +257,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def setup_top_camera(self, camera_config: CameraConfig, start: bool = True):
-        self.recording_manager.configure_top_camera(camera_config, start)
+        self.recording_manager.configure_top_camera(camera_config)
         self.recording_manager.reset_error()
 
         camera_ready = True
@@ -273,7 +273,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def setup_front_camera(self, camera_config: CameraConfig, start: bool = True):
-        self.recording_manager.configure_front_camera(camera_config, start)
+        self.recording_manager.configure_front_camera(camera_config)
         self.recording_manager.reset_error()
 
         camera_ready = True
@@ -291,12 +291,12 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def configure_top_camera(self):
         available_cameras = self.get_available_cameras()
 
-        if self.recording_manager.camera_front_config is not None:
-            if self.recording_manager.camera_front_config.camera_id is not None:
-                if self.recording_manager.camera_front_config.camera_id in available_cameras:
-                    available_cameras.remove(self.recording_manager.camera_front_config.camera_id)
+        if self.recording_manager.recording_builder.front_camera_config is not None:
+            if self.recording_manager.recording_builder.front_camera_config.camera_id is not None:
+                if self.recording_manager.recording_builder.front_camera_config.camera_id in available_cameras:
+                    available_cameras.remove(self.recording_manager.recording_builder.front_camera_config.camera_id)
 
-        dlg = ConfigureCamera(self, self.recording_manager.camera_top_config, available_cameras, debug_mode=self.debug_mode)
+        dlg = ConfigureCamera(self, self.recording_manager.recording_builder.top_camera_config, available_cameras, debug_mode=self.debug_mode)
         dlg.setWindowTitle("Configure Top Camera")
         dlg.applied_signal.connect(self.setup_top_camera)
         dlg.exec()
@@ -305,12 +305,12 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def configure_front_camera(self):
         available_cameras = self.get_available_cameras()
 
-        if self.recording_manager.camera_top_config is not None:
-            if self.recording_manager.camera_top_config.camera_id is not None:
-                if self.recording_manager.camera_top_config.camera_id in available_cameras:
-                    available_cameras.remove(self.recording_manager.camera_top_config.camera_id)
+        if self.recording_manager.recording_builder.top_camera_config is not None:
+            if self.recording_manager.recording_builder.top_camera_config.camera_id is not None:
+                if self.recording_manager.recording_builder.top_camera_config.camera_id in available_cameras:
+                    available_cameras.remove(self.recording_manager.recording_builder.top_camera_config.camera_id)
 
-        dlg = ConfigureCamera(self, self.recording_manager.camera_front_config, available_cameras, debug_mode=self.debug_mode)
+        dlg = ConfigureCamera(self, self.recording_manager.recording_builder.front_camera_config, available_cameras, debug_mode=self.debug_mode)
         dlg.setWindowTitle("Configure Front Camera")
         dlg.applied_signal.connect(self.setup_front_camera)
         dlg.exec()
@@ -346,7 +346,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def configure_recording(self):
-        dlg = ConfigureRecording(self, self.recording_manager.recording_config)
+        dlg = ConfigureRecording(self, self.recording_manager.recording_builder.recording_config)
         dlg.applied_signal.connect(self.recording_config_changed)
         dlg.exec()
 
@@ -358,7 +358,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def configure_video_files(self):
-        dlg = ConfigureVideoFiles(self, self.recording_manager.video_files_config)
+        dlg = ConfigureVideoFiles(self, self.recording_manager.recording_builder.video_files_config)
         dlg.applied_signal.connect(self.video_files_config_changed)
         dlg.exec()
 
@@ -370,7 +370,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     @Trace.trace(logger)
     def configure_grimace_scoring(self):
         available_devices = self.get_available_devices()
-        dlg = ConfigureGrimaceScoring(self, self.recording_manager.grimace_config, available_devices, debug_mode=self.debug_mode)
+        dlg = ConfigureGrimaceScoring(self, self.recording_manager.recording_builder.grimace_config, available_devices, debug_mode=self.debug_mode)
         dlg.applied_signal.connect(self.grimace_config_changed)
         dlg.exec()
 
@@ -382,28 +382,28 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     @Trace.trace(logger)
     def configure_pose_tracking(self):
         available_devices = self.get_available_devices()
-        dlg = ConfigurePoseTracking(self, self.recording_manager.pose_config, available_devices, debug_mode=self.debug_mode)
+        dlg = ConfigurePoseTracking(self, self.recording_manager.recording_builder.pose_config, available_devices, debug_mode=self.debug_mode)
         dlg.applied_signal.connect(self.pose_config_changed)
         dlg.exec()
 
     @Trace.trace(logger)
     def overview_changed(self):
-        recording_running = self.recording_manager.recording_running
+        recording_running = self.recording_manager.recording is not None and self.recording_manager.recording.running
         recording_state = "running recording" if recording_running else "next recording"
 
-        recording_number = self.recording_manager.recording_number
+        recording_number = self.recording_manager.recording_builder.recording_number
         if recording_number is None:
             recording_number = "Not configured"
         else:
             recording_number = str(recording_number)
 
-        recording_mode = self.recording_manager.recording_config.mode
+        recording_mode = self.recording_manager.recording_builder.recording_config.mode
         if recording_mode is None:
             recording_duration = "Not configured"
         elif recording_mode == "Manual":
             recording_duration = "Manual"
         elif recording_mode == "Timed":
-            recording_duration = self.recording_manager.recording_config.duration
+            recording_duration = self.recording_manager.recording_builder.recording_config.duration
             if recording_duration is not None:
                 recording_duration = str(timedelta(seconds=recording_duration))
             else:
@@ -411,45 +411,45 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         else:
             recording_duration = "Not Configured"
 
-        top_camera_fps = self.recording_manager.camera_top_config.fps
+        top_camera_fps = self.recording_manager.recording_builder.top_camera_config.fps
         if top_camera_fps is None:
             top_camera_fps = "Not configured"
         else:
             top_camera_fps = str(top_camera_fps) + " FPS"
 
-        front_camera_fps = self.recording_manager.camera_front_config.fps
+        front_camera_fps = self.recording_manager.recording_builder.front_camera_config.fps
         if front_camera_fps is None:
             front_camera_fps = "Not configured"
         else:
             front_camera_fps = str(front_camera_fps) + " FPS"
 
-        top_video_file = self.recording_manager.top_video_file
+        top_video_file = self.recording_manager.recording_builder.top_video_writer_builder.video_file
         if top_video_file is None:
             top_video_file = "Not configured"
         else:
             top_video_file = str(top_video_file)
 
-        front_video_file = self.recording_manager.front_video_file
+        front_video_file = self.recording_manager.recording_builder.front_video_writer_builder.video_file
         if front_video_file is None:
             front_video_file = "Not configured"
         else:
             front_video_file = str(front_video_file)
 
-        if self.recording_manager.grimace_config is None:
+        if self.recording_manager.recording_builder.grimace_config is None:
             grimace_enabled = "Not configured"
             grimace_overview = ""
         else:
-            grimace_enabled = "Enabled" if self.recording_manager.grimace_config.enabled else "Disabled"
+            grimace_enabled = "Enabled" if self.recording_manager.recording_builder.grimace_config.enabled else "Disabled"
 
-            if self.recording_manager.grimace_config.enabled:
-                grimace_model = self.recording_manager.grimace_config.grimace_model
+            if self.recording_manager.recording_builder.grimace_config.enabled:
+                grimace_model = self.recording_manager.recording_builder.grimace_config.grimace_model
                 if grimace_model is None:
                     grimace_model = "Not configured"
-                frame_interval = self.recording_manager.grimace_config.frame_interval
+                frame_interval = self.recording_manager.recording_builder.grimace_config.frame_interval
                 if frame_interval is None:
                     frame_interval_str = "Not configured"
                 else:
-                    frame_interval_seconds = round(self.recording_manager.grimace_config.frame_interval)
+                    frame_interval_seconds = round(self.recording_manager.recording_builder.grimace_config.frame_interval)
 
                     minutes = frame_interval_seconds // 60
                     seconds = frame_interval_seconds % 60
@@ -462,7 +462,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
                 grimace_overview = GRIMACE_OVERVIEW_TEMPLATE.format(
                     grimace_model=grimace_model,
                     frame_interval=frame_interval_str,
-                    grimace_results_file=self.recording_manager.grimace_results_file
+                    grimace_results_file=self.recording_manager.recording_builder.front_video_pipeline_builder.grimace_results_file
                 )
             else:
                 grimace_overview = ""
@@ -533,7 +533,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def recording_started(self):
-        if self.recording_manager.grimace_config.enabled:
+        if self.recording_manager.recording_builder.grimace_config.enabled:
             self.open_grimace_results_window()
         self.update_menubar()
         self.update_recording_button()
@@ -547,12 +547,11 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def start_recording(self):
-        self.recording_manager.prepare_recording()
         self.recording_manager.start_recording()
 
     @Trace.trace(logger)
     def stop_recording(self):
-        if self.recording_manager.recording_config.mode == "Timed":
+        if self.recording_manager.recording_builder.recording_config.mode == "Timed":
             msg = QMessageBox(parent=self)
             msg.setWindowTitle("Confirm")
             msg.setText("The recording is configured to stop automatically after a certain duration. "
@@ -564,18 +563,18 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             if msg.result() == QMessageBox.StandardButton.No:
                 return
 
-        self.recording_manager.stop_recording()
+        self.recording_manager.stop()
 
     @Trace.trace(logger)
     def btn_record_clicked(self):
-        if not self.recording_manager.recording_running:
+        if not (self.recording_manager.recording is not None and self.recording_manager.recording.running):
             self.start_recording()
         else:
             self.stop_recording()
 
     @Trace.trace(logger)
     def closeEvent(self, event):
-        if self.recording_manager.recording_running:
+        if self.recording_manager.recording is not None and self.recording_manager.recording.running:
             msg = QMessageBox(parent=self)
             msg.setWindowTitle("Confirm")
             msg.setText("The recording is configured to stop automatically after a certain duration. "
@@ -588,7 +587,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
                 event.ignore()
                 return
 
-        self.recording_manager.force_stop_recording(start_preview=False)
+        self.recording_manager.stop()
 
         super(MainWindow, self).closeEvent(event)
 
@@ -596,13 +595,13 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def save_project(self):
         if self.config_file is None:
             return self.save_project_as()
-        camera_top_config = self.recording_manager.camera_top_config
-        camera_front_config = self.recording_manager.camera_front_config
-        recording_config = self.recording_manager.recording_config
-        video_files_config = self.recording_manager.video_files_config
-        grimace_config = self.recording_manager.grimace_config
-        pose_top_config = self.recording_manager.pose_config
-        ConfigLoader.save(Path(self.config_file), camera_top_config, camera_front_config,
+        top_camera_config = self.recording_manager.recording_builder.top_camera_config
+        front_camera_config = self.recording_manager.recording_builder.front_camera_config
+        recording_config = self.recording_manager.recording_builder.recording_config
+        video_files_config = self.recording_manager.recording_builder.video_files_config
+        grimace_config = self.recording_manager.recording_builder.grimace_config
+        pose_top_config = self.recording_manager.recording_builder.pose_config
+        ConfigLoader.save(Path(self.config_file), top_camera_config, front_camera_config,
                           recording_config, video_files_config, grimace_config, pose_top_config)
 
     @Trace.trace(logger)
@@ -625,7 +624,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     @Trace.trace(logger)
     def load_project(self):
-        if self.recording_manager.recording_running:
+        if self.recording_manager.recording is not None and self.recording_manager.recording.running:
             msg = QMessageBox(parent=self)
             msg.setWindowTitle("Error")
             msg.setText("Cannot load project while recording is running. "
@@ -654,7 +653,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         self.config_file = selected_file
         try:
-            camera_top_config, camera_front_config, recording_config, video_files_config, grimace_config, pose_top_config = \
+            top_camera_config, front_camera_config, recording_config, video_files_config, grimace_config, pose_top_config = \
                 ConfigLoader.load(Path(self.config_file))
         except Exception as e:
             logger.exception("Error loading project file")
@@ -668,40 +667,40 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         progress.setValue(20)
         progress.setLabelText("Applying configuration...")
 
-        error = CameraConfigValidator.validate(camera_top_config)
+        error = CameraConfigValidator.validate(top_camera_config)
         if error is not None:
-            logger.warning("Error loading top camera config: %s %s", error, camera_top_config)
+            logger.warning("Error loading top camera config: %s %s", error, top_camera_config)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Unable to load top camera configuration")
             dlg.setText(error)
             dlg.setIcon(QMessageBox.Icon.Warning)
             dlg.exec()
-            camera_top_config = CameraConfig()
+            top_camera_config = CameraConfig()
 
         progress.setValue(25)
 
-        error = CameraConfigValidator.validate(camera_front_config)
+        error = CameraConfigValidator.validate(front_camera_config)
         if error is not None:
-            logger.warning("Error loading front camera config: %s %s", error, camera_front_config)
+            logger.warning("Error loading front camera config: %s %s", error, front_camera_config)
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Unable to load front camera configuration")
             dlg.setText(error)
             dlg.setIcon(QMessageBox.Icon.Warning)
             dlg.exec()
-            camera_front_config = CameraConfig()
+            front_camera_config = CameraConfig()
 
         progress.setValue(30)
 
-        if camera_top_config.camera_id is not None and camera_front_config.camera_id is not None:
-            if camera_top_config.camera_id == camera_front_config.camera_id:
-                logger.warning("Error loading camera config: Identical camera ids %s %s", camera_top_config, camera_front_config)
+        if top_camera_config.camera_id is not None and front_camera_config.camera_id is not None:
+            if top_camera_config.camera_id == front_camera_config.camera_id:
+                logger.warning("Error loading camera config: Identical camera ids %s %s", top_camera_config, front_camera_config)
                 dlg = QMessageBox(self)
                 dlg.setWindowTitle("Unable to load camera configuration")
                 dlg.setText("Top and front camera cannot have the same device ID")
                 dlg.setIcon(QMessageBox.Icon.Warning)
                 dlg.exec()
-                camera_top_config = CameraConfig()
-                camera_front_config = CameraConfig()
+                top_camera_config = CameraConfig()
+                front_camera_config = CameraConfig()
 
         progress.setValue(35)
 
@@ -752,16 +751,16 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         # Only start the camera thread once both cameras are configured
         try:
-            self.setup_top_camera(camera_top_config, start=False)
+            self.setup_top_camera(top_camera_config, start=False)
         except Exception as e:
             self.on_top_camera_error(str(e))
 
         try:
-            self.setup_front_camera(camera_front_config, start=False)
+            self.setup_front_camera(front_camera_config, start=False)
         except Exception as e:
             self.on_front_camera_error(str(e))
 
         progress.setValue(100)
 
         # TODO: Is this correct?
-        self.recording_manager.start_preview()
+        #self.recording_manager.start_preview()
