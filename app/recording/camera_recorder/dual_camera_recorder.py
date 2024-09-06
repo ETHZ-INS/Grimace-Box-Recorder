@@ -1,185 +1,28 @@
 import time
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Union, Optional
+from typing import Optional
 
-import cv2
 import numpy as np
 from PySide6.QtCore import QThread, Signal
 from pypylon import pylon
 
 from app.config.camera import CameraConfig
-from app.dataflow.qqueue import QQueue
-from app.dataflow.qvariable import QVariable
+from app.dataflow.qqueue import QQueue, IQueue
+from app.recording.camera_recorder.source.base_source import CameraSource
+from app.recording.camera_recorder.source.file_source import FileCameraSource
+from app.recording.camera_recorder.source.pylon_source import PylonCameraSource
 from app.recording.recording_context import RecordingContext
 
 import logging
 
+from grimace.camera_identifier import CameraIdentifier
 from util.trace import Trace
 
 logger = logging.getLogger("grimace_recorder.app.recording.dual_video_recorder")
 
 
-class CameraSource(ABC):
-    @abstractmethod
-    def get_width(self) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_height(self) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_fps(self) -> float:
-        raise NotImplementedError
-
-    @abstractmethod
-    def grab_frame(self) -> (bool, int, float, np.ndarray):
-        raise NotImplementedError
-
-    @abstractmethod
-    def start(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def stop(self):
-        raise NotImplementedError
-
-    def close(self):
-        pass
-
-
-class PylonCameraSource(CameraSource):
-    def __init__(self, camera: pylon.InstantCamera):
-        self.camera = camera
-        self.width = camera.Width.GetValue()
-        self.height = camera.Height.GetValue()
-
-        if hasattr(camera, 'AcquisitionFrameRateAbs'):
-            self.fps = camera.AcquisitionFrameRateAbs.GetValue()
-        else:
-            self.fps = camera.AcquisitionFrameRate.GetValue()
-
-    def get_width(self):
-        return self.width
-
-    def get_height(self):
-        return self.height
-
-    def get_fps(self):
-        return self.fps
-
-    def start(self):
-        self.camera.StartGrabbing(pylon.GrabStrategy_OneByOne)
-
-    def stop(self):
-        self.camera.StopGrabbing()
-
-    def close(self):
-        self.camera.StopGrabbing()
-        self.camera.Close()
-
-    def process_grab_result(self, grab_result: pylon.GrabResult) -> (bool, int, float, np.ndarray):
-        if not grab_result.IsValid():
-            # I think this means there is no new frame available, but it might be the other one
-            grab_result.Release()
-            return False, None, None, None
-
-        if not grab_result.GrabSucceeded():
-            # TODO: Is this exception worthy?
-            grab_result.Release()
-            return False, None, None, None
-
-        timestamp = grab_result.GetTimeStamp()
-        if timestamp == 0:
-            # The emulated pylon cameras return 0 for timestamp
-            timestamp = None
-        else:
-            timestamp = timestamp / 125000000
-
-        frame_number = grab_result.GetImageNumber()
-
-        frame = grab_result.GetArray()
-        if len(frame.shape) == 2:
-            frame = frame[:, :, np.newaxis]
-
-        return True, frame_number, timestamp, frame
-
-    def grab_frame(self) -> (bool, int, float, np.ndarray):
-        if self.camera.IsCameraDeviceRemoved():
-            raise Exception("Camera is not connected")
-
-        if not self.camera.IsOpen():
-            raise Exception("Camera is not open")
-
-        if not self.camera.IsGrabbing():
-            raise Exception("Camera is not grabbing")
-
-        grab_result = self.camera.RetrieveResult(0, pylon.TimeoutHandling_Return)
-
-        try:
-            return self.process_grab_result(grab_result)
-        finally:
-            grab_result.Release()
-
-
-class FileCameraSource(CameraSource):
-    def __init__(self, video_file: str):
-        self.video_file = video_file
-        self.vc = cv2.VideoCapture(video_file)
-        self.width = int(self.vc.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.height = int(self.vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.fps = float(self.vc.get(cv2.CAP_PROP_FPS))
-        self.start_time = None
-        self.last_frame_time = None
-        self.frame_number = 0
-
-    def get_width(self):
-        return self.width
-
-    def get_height(self):
-        return self.height
-
-    def get_fps(self):
-        return self.fps
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
-    def close(self):
-        self.vc.release()
-
-    def grab_frame(self) -> (bool, int, float, np.ndarray):
-        now = time.time()
-        if self.start_time is None:
-            self.start_time = now
-
-        next_frame_time = self.start_time + (self.frame_number+1) * (1 / self.fps)
-
-        if self.last_frame_time is None or now > next_frame_time:
-            ret, frame = self.vc.read()
-            if not ret:
-                raise Exception("Unable to read next video frame")
-            if len(frame.shape) == 2:
-                frame = frame[:, :, np.newaxis]
-            if frame.shape[2] > 1:
-                #frame = np.mean(frame, axis=2, keepdims=True)
-                frame = frame[:, :, :1]
-            self.last_frame_time = next_frame_time
-            self.frame_number += 1
-            return True, self.frame_number, next_frame_time, frame
-        else:
-            return False, None, None, None
-
-
 def build_pylon_camera_source(config: CameraConfig):
     tlf = pylon.TlFactory.GetInstance()
     devices = tlf.EnumerateDevices()
-    if len(devices) == 0:
-        raise ValueError("No devices found")
     devices = [device for device in devices if device.GetSerialNumber() == config.camera_id]
     if len(devices) == 0:
         raise ValueError(f"Device with serial number {config.camera_id} not found")
@@ -231,9 +74,7 @@ class DualCameraRecorder(QThread):
             self.source = source
             self.timestamp_offset = None
 
-            self.preview_buffer: Optional[QVariable] = None
             self.video_buffer: Optional[QQueue] = None
-            self.grimace_buffer: Optional[QQueue] = None
 
             self.timestamp_history = [0] * 10
             self.fps = 0.0
@@ -244,6 +85,11 @@ class DualCameraRecorder(QThread):
             self.dropped_frames = 0
             self.buffer_fill_level = 0.0
 
+            self.camera_identifier_scores = []
+
+            # TODO: This is a temporary solution
+            self.target_fps = 30.0
+
         def get_width(self):
             return self.source.get_width()
 
@@ -251,16 +97,8 @@ class DualCameraRecorder(QThread):
             return self.source.get_height()
 
         @Trace.trace(logger)
-        def set_preview_buffer(self, preview_buffer: QVariable):
-            self.preview_buffer = preview_buffer
-
-        @Trace.trace(logger)
-        def set_video_buffer(self, video_buffer: QQueue):
+        def set_video_buffer(self, video_buffer: IQueue):
             self.video_buffer = video_buffer
-
-        @Trace.trace(logger)
-        def set_grimace_buffer(self, grimace_buffer: QQueue):
-            self.grimace_buffer = grimace_buffer
 
         def set_timestamp_offset(self, timestamp: float):
             self.timestamp_offset = timestamp
@@ -292,8 +130,10 @@ class DualCameraRecorder(QThread):
             self.source.close()
 
     @Trace.trace(logger)
-    def __init__(self):
+    def __init__(self, camera_identifier: CameraIdentifier):
         super(DualCameraRecorder, self).__init__()
+
+        self.camera_identifier = camera_identifier
 
         self.top_camera: Optional[DualCameraRecorder.Camera] = None
         self.front_camera: Optional[DualCameraRecorder.Camera] = None
@@ -305,9 +145,12 @@ class DualCameraRecorder(QThread):
     @Trace.trace(logger)
     def set_top_camera(self, source: CameraSource | None, start: bool = True):
         if self.running:
-            self.stop()
-            self.wait()
+            raise Exception("Cannot change camera source while recorder is running")
+            #self.stop()
+            #self.wait()
 
+        # TODO: Now that i open the camera before setting the source, there's an error if i try to use the same camera
+        #  Temp solution is to first set the source to None, then set the new source
         if self.top_camera is not None:
             self.top_camera.close()
             self.top_camera = None
@@ -315,14 +158,15 @@ class DualCameraRecorder(QThread):
         if source is not None:
             self.top_camera = DualCameraRecorder.Camera(source)
 
-        if start:
-            self.start()
+        #if start:
+        #    self.start()
 
     @Trace.trace(logger)
     def set_front_camera(self, source: CameraSource | None, start: bool = True):
         if self.running:
-            self.stop()
-            self.wait()
+            raise Exception("Cannot change camera source while recorder is running")
+            #self.stop()
+            #self.wait()
 
         if self.front_camera is not None:
             self.front_camera.close()
@@ -331,8 +175,8 @@ class DualCameraRecorder(QThread):
         if source is not None:
             self.front_camera = DualCameraRecorder.Camera(source)
 
-        if start:
-            self.start()
+        #if start:
+        #    self.start()
 
     @Trace.trace(logger)
     def set_recording_context(self, recording_context: RecordingContext):
@@ -341,6 +185,10 @@ class DualCameraRecorder(QThread):
     def handle_frame(self, camera: Camera, frame: np.ndarray, timestamp: float):
         if camera.timestamp_offset is None:
             camera.set_timestamp_offset(timestamp)
+
+        # TODO: This is a temporary solution
+        if len(camera.camera_identifier_scores) < 10 and camera.frame_index % 30 == 0:
+            camera.camera_identifier_scores.append(self.camera_identifier.score(frame))
 
         normalized_timestamp = timestamp - camera.timestamp_offset
 
@@ -362,26 +210,6 @@ class DualCameraRecorder(QThread):
         video_buffer = camera.video_buffer
         if video_buffer is not None:
             video_buffer.enqueue((frame, camera.frame_index, normalized_timestamp))
-
-        grimace_buffer = camera.grimace_buffer
-        if grimace_buffer is not None:
-            grimace_buffer.enqueue((frame, camera.frame_index, normalized_timestamp))
-
-        frame = frame.copy()
-        frame = cv2.putText(frame, f"{fps:.2f} FPS", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-
-        #if "psBC" in camera.source.video_file:
-        #    yolo_frame = np.concatenate([frame, frame, frame], axis=2)
-        #    instance = self.top_pose_estimator.get_instance(yolo_frame)
-        #    for point in instance.pose:
-        #        if point.conf > 0.5:
-        #            x = round(point.x * frame.shape[1])
-        #            y = round(point.y * frame.shape[0])
-        #            frame = cv2.circle(frame,(x, y),radius=5, thickness=-1,color=(255,0,0))
-
-        preview_buffer = camera.preview_buffer
-        if preview_buffer is not None:
-            preview_buffer.set(frame)
 
         #num_buffered_frames = camera.camera.NumReadyBuffers.GetValue()
         #camera.buffer_fill_level = num_buffered_frames / 1000
@@ -461,14 +289,50 @@ class DualCameraRecorder(QThread):
             top_camera.source.stop()
             if top_camera.video_buffer is not None:
                 top_camera.video_buffer.close()
-            if top_camera.grimace_buffer is not None:
-                top_camera.grimace_buffer.close()
         if front_camera is not None:
             front_camera.source.stop()
             if front_camera.video_buffer is not None:
                 front_camera.video_buffer.close()
-            if front_camera.grimace_buffer is not None:
-                front_camera.grimace_buffer.close()
+
+    def check_health(self):
+        report = {"warnings": {}}
+
+        top_camera = self.top_camera
+        front_camera = self.front_camera
+
+        for camera, name in [(top_camera, "top"), (front_camera, "front")]:
+            if camera is None:
+                continue
+
+            warning = None
+            # Arbitrary threshold of 10% buffer fill. The buffer should usually be practically empty
+            if camera.buffer_fill_level > 0.1:
+                warning = f"{name.capitalize()} camera buffer fill level: {camera.buffer_fill_level * 100:.2f}%"
+            report["warnings"][f"{name}_camera_buffer_fill"] = warning
+
+            warning = None
+            # Arbitrary threshold of 5% below target FPS. The FPS should usually be very close to the target
+            if camera.fps < camera.target_fps * 0.95:
+                warning = f"{name.capitalize()} camera FPS: {camera.fps:.2f} (expected {camera.target_fps})"
+            report["warnings"][f"{name}_camera_fps"] = warning
+
+            warning = None
+            # Dropped frames should be 0. If not, there is probably a problem
+            if camera.dropped_frames > 0:
+                warning = f"{name.capitalize()} camera dropped {camera.dropped_frames} frames"
+            report["warnings"][f"{name}_camera_dropped_frames"] = warning
+
+        if top_camera is not None and front_camera is not None:
+            top_mean_identifier = np.mean(top_camera.camera_identifier_scores)
+            front_mean_identifier = np.mean(front_camera.camera_identifier_scores)
+            warning = None
+            # The camera identifier score should be close to 1 for the front camera and close to 0 for the top camera
+            # If the mean identifier score is higher for the top camera, the cameras are likely switched
+            if top_mean_identifier > front_mean_identifier:
+                warning = "Top and front camera are likely switched. Make sure you have selected the correct devices"
+            report["warnings"]["cameras_switched"] = warning
+
+        return report
 
     @Trace.trace(logger)
     def start(self, priority=QThread.Priority.InheritPriority):

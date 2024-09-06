@@ -4,5 +4,5 @@ dist/
 documentation/software_manual/auxil
 models/*.pt
 *.synctex.gz
-main.spec
+*.spec
 auxil/

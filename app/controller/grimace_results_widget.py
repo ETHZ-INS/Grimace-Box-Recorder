@@ -1,4 +1,8 @@
+from pathlib import Path
+
 import cv2
+import sys
+import os
 import numpy as np
 from PySide6 import QtCore
 from PySide6.QtCore import Signal, QRect
@@ -14,6 +18,10 @@ import logging
 from util.trace import Trace
 
 logger = logging.getLogger("grimace_recorder.app.analysis.grimace_results_widget")
+
+bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
+res_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'res')))
+grimace_legend_image_file = res_folder / "grimace_legend.drawio.png"
 
 
 class HorizontalGaugePlot(QLabel):
@@ -61,6 +69,9 @@ class HorizontalGaugePlot(QLabel):
         qp.setBrush(self.color_red)
         qp.drawRect(x3, gauge_offset_y, x4 - x3, gauge_height)
 
+        if np.isnan(self.score):
+            return
+
         # draw needle
         score_percentage = (self.score - self.min_score) / (self.max_score - self.min_score)
         score_x = int(x1 + score_percentage * (x4 - x1))
@@ -83,7 +94,7 @@ class HorizontalGaugePlot(QLabel):
 
 STATS_TEMPLATE = """
 Intervals Analyzed: {num_intervals}  
-Frames Sampled: {num_frames_sampled}  
+Frames Scored: {num_frames_sampled}  
 Mean Grimace Score: {mean_grimace_score:.2f}
 """
 
@@ -96,25 +107,44 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         super().__init__(parent)
         self.setupUi(self)
 
+        self.lbl_grimace_legend.setPixmap(QPixmap(str(grimace_legend_image_file)))
+
         self.grimace_images = grimace_images
         self.num_images = 0
         self.num_frames_sampled = 0
 
         self.gauge_plot = HorizontalGaugePlot(self)
-        self.gauge_plot.setSizePolicy(QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed))
-        self.gauge_plot.setMinimumHeight(40)
-        self.gauge_plot.setMinimumHeight(40)
-        self.gauge_plot.setMinimumWidth(100)
-        self.frm_grimace_stats.layout().addWidget(self.gauge_plot)
+        self.gauge_plot.setSizePolicy(QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding))
+        self.frm_gauge_plot.layout().addWidget(self.gauge_plot)
 
-        bar = self.scrollArea.verticalScrollBar()
-        bar.rangeChanged.connect(lambda x, y: bar.setValue(y))
+        self.scrollbar = self.scrollArea.verticalScrollBar()
+        self.scrollbar.valueChanged.connect(self.scrollbar_value_changed)
+        self.scrollbar.rangeChanged.connect(self.scrollbar_range_changed)
+
+        self.manual_scrolling = False
+        self.scrollbar_last_value = -1
 
         self.clear_images()
         self.refresh()
 
         self.grimace_images.list_cleared.connect(self.clear_images)
         self.grimace_images.list_changed.connect(self.refresh)
+
+        self.setMinimumWidth(0)
+        self.adjustSize()
+        self.setMinimumWidth(self.width())
+        self.setMaximumWidth(self.width())
+
+    def scrollbar_value_changed(self, value):
+        if value < self.scrollbar_last_value:
+            self.manual_scrolling = True
+        elif abs(value - self.scrollbar.maximum()) < 2:
+            self.manual_scrolling = False
+        self.scrollbar_last_value = value
+
+    def scrollbar_range_changed(self, min, max):
+        if not self.manual_scrolling:
+            self.scrollbar.setValue(max)
 
     @Trace.trace(logger)
     def clear_images(self):
@@ -164,9 +194,9 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
                 label.setText("No suitable image found")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setMinimumWidth(150)
-                label.setMinimumHeight(150)
                 label.setMaximumWidth(150)
-                label.setMaximumHeight(150)
+                label.setMinimumHeight(40)
+                label.setMaximumHeight(40)
                 label.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
 
             self.frm_grimace_images.layout().addWidget(label)
@@ -175,7 +205,7 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         all_grimace_scores = [grimace_scores for _, grimace_scores in self.grimace_images.items if
                               grimace_scores is not None]
         if len(all_grimace_scores) == 0:
-            mean_grimace_score = 0.0
+            mean_grimace_score = np.nan
         else:
             all_grimace_scores = np.stack(all_grimace_scores, axis=0)
             all_grimace_scores = all_grimace_scores.astype(np.float32)
@@ -192,13 +222,3 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         self.lbl_grimace_stats.setText(stats)
         self.gauge_plot.score = mean_grimace_score
         self.gauge_plot.update()
-
-
-if __name__ == "__main__":
-    import sys
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    dialog = GrimaceResults(None, QList())
-    dialog.show()
-    sys.exit(app.exec_())

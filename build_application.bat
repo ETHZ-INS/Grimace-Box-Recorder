@@ -5,10 +5,19 @@ pyinstaller^
  --add-data "models/frame_quality.pt;./models"^
  --add-data "models/face_cropper.pt;./models"^
  --add-data "models/grimace_scorer.pt;./models"^
+ --add-data "models/top_pose_estimator.pt;./models"^
+ --add-data "models/top_pose_keypoints.txt;./models"^
+ --add-data "models/mock_frame_quality_v2.pt;./models"^
+ --add-data "models/mock_face_cropper_v2.pt;./models"^
+ --add-data "models/mock_grimace_scorer_v2.pt;./models"^
+ --add-data "models/mock_top_pose_estimator.pt;./models"^
  --add-data "camera_config/top.pfs;./camera_config"^
  --add-data "camera_config/front.pfs;./camera_config"^
+ --add-data "res/logo.png;./res"^
+ --add-data "res/logo.ico;./res"^
+ --add-data "res/splashscreen.png;./res"^
  --onedir^
  --noconsole^
  --name "Grimace Box"^
- --icon "res/grimace_box_icon.ico"^
+ --icon "res/logo.ico"^
  main.py -y

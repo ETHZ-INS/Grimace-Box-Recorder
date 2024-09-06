@@ -53,6 +53,8 @@ class Ui_WGrimaceBox(object):
         self.action_contact_support.setObjectName(u"action_contact_support")
         self.action_open_grimace_results_window = QAction(WGrimaceBox)
         self.action_open_grimace_results_window.setObjectName(u"action_open_grimace_results_window")
+        self.action_configure_pose_tracking = QAction(WGrimaceBox)
+        self.action_configure_pose_tracking.setObjectName(u"action_configure_pose_tracking")
         self.centralwidget = QWidget(WGrimaceBox)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -113,7 +115,7 @@ class Ui_WGrimaceBox(object):
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer)
 
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
 
@@ -229,7 +231,7 @@ class Ui_WGrimaceBox(object):
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.btn_record.sizePolicy().hasHeightForWidth())
         self.btn_record.setSizePolicy(sizePolicy5)
-        self.btn_record.setMinimumSize(QSize(0, 0))
+        self.btn_record.setMinimumSize(QSize(100, 0))
 
         self.horizontalLayout_2.addWidget(self.btn_record)
 
@@ -245,6 +247,7 @@ class Ui_WGrimaceBox(object):
         self.lbl_time.setObjectName(u"lbl_time")
         sizePolicy5.setHeightForWidth(self.lbl_time.sizePolicy().hasHeightForWidth())
         self.lbl_time.setSizePolicy(sizePolicy5)
+        self.lbl_time.setMinimumSize(QSize(100, 0))
         self.lbl_time.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.horizontalLayout_2.addWidget(self.lbl_time)
@@ -296,6 +299,7 @@ class Ui_WGrimaceBox(object):
         self.menuHelp.addAction(self.action_report_bug)
         self.menuHelp.addAction(self.action_contact_support)
         self.menuAnalysis.addAction(self.action_configure_grimace_scoring)
+        self.menuAnalysis.addAction(self.action_configure_pose_tracking)
         self.menuAnalysis.addAction(self.action_open_grimace_results_window)
 
         self.retranslateUi(WGrimaceBox)
@@ -352,6 +356,7 @@ class Ui_WGrimaceBox(object):
 #if QT_CONFIG(tooltip)
         self.action_open_grimace_results_window.setToolTip(QCoreApplication.translate("WGrimaceBox", u"Open the grimace results window again if you have (accidentally) closed it", None))
 #endif // QT_CONFIG(tooltip)
+        self.action_configure_pose_tracking.setText(QCoreApplication.translate("WGrimaceBox", u"Configure Pose Tracking", None))
         self.label.setText(QCoreApplication.translate("WGrimaceBox", u"Top Camera", None))
 #if QT_CONFIG(tooltip)
         self.lbl_video_top.setToolTip("")

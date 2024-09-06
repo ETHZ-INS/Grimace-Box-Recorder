@@ -1,7 +1,13 @@
 from PySide6.QtCore import QObject, Signal
 
+from app.dataflow.qqueue import IQueue
 
-class QList(QObject):
+
+class QListMeta(type(QObject), type(IQueue)):
+    pass
+
+
+class QList(QObject, IQueue, metaclass=QListMeta):
     """
     A thread-safe list with signals for changes
     """
@@ -13,7 +19,7 @@ class QList(QObject):
         super(QList, self).__init__()
         self.items = []
 
-    def append(self, item):
+    def enqueue(self, item):
         self.items.append(item)
         self.list_changed.emit()
 
@@ -25,3 +31,7 @@ class QList(QObject):
         self.items.clear()
         self.list_cleared.emit()
         self.list_changed.emit()
+
+    def close(self):
+        # TODO: Does this need to do anything?
+        pass

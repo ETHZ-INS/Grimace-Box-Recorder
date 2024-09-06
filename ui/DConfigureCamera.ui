@@ -39,19 +39,6 @@
     <enum>QLayout::SetMinAndMaxSize</enum>
    </property>
    <item>
-    <widget class="QLabel" name="lbl_title">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Configure Top Camera</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QFrame" name="frm_camera_type">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">

@@ -3,7 +3,7 @@ from pathlib import Path
 import cv2
 
 from app.dataflow.qqueue import QQueue
-from app.dataflow.queue_reader import QueueReader
+from app.process.queue_process import QueueProcess
 
 import logging
 
@@ -12,10 +12,10 @@ from util.trace import Trace
 logger = logging.getLogger("grimace_recorder.app.recording.video_writer")
 
 
-class BufferVideoWriter(QueueReader):
+class BufferVideoWriter(QueueProcess):
     @Trace.trace(logger)
-    def __init__(self, video_writer: cv2.VideoWriter, video_buffer: QQueue, timestamp_file: Path = None):
-        super(BufferVideoWriter, self).__init__(video_buffer, wait_time=0.01)
+    def __init__(self, video_writer: cv2.VideoWriter, queue_size: int, timestamp_file: Path = None):
+        super(BufferVideoWriter, self).__init__(queue_size, wait_time=0.01)
 
         self.video_writer = video_writer
         self.timestamp_file = timestamp_file
@@ -39,3 +39,16 @@ class BufferVideoWriter(QueueReader):
         if self.timestamp_file_handle is not None:
             self.timestamp_file_handle.close()
         self.video_writer.release()
+
+    def check_health(self, *args, prefix: str = "", fill_threshold: float = 0.1, **kwargs) -> dict:
+        report = {"warnings": {}}
+
+        queue_fill_level = self.queue.get_fill_level()
+        report[prefix+"video_writer_queue_fill_level"] = queue_fill_level
+
+        warning = None
+        if queue_fill_level > fill_threshold:
+            warning = f"Video writer queue fill level: {queue_fill_level * 100:.2f}%"
+        report["warnings"][prefix+"video_writer_queue_fill"] = warning
+
+        return report

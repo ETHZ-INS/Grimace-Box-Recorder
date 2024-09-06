@@ -3,8 +3,14 @@ import threading
 import numpy as np
 from PySide6.QtCore import QObject, Signal
 
+from app.dataflow.qqueue import IQueue
 
-class QVariable(QObject):
+
+class QVariableMeta(type(QObject), type(IQueue)):
+    pass
+
+
+class QVariable(QObject, IQueue, metaclass=QVariableMeta):
     """
     A thread-safe variable
     Sends a signal when the value is set, but only if it has been read since the last set
@@ -20,7 +26,7 @@ class QVariable(QObject):
 
         self.lock = threading.Lock()
 
-    def set(self, value: np.ndarray):
+    def enqueue(self, value):
         with self.lock:
             self.value = value
             if self.read_since_set:
@@ -34,3 +40,10 @@ class QVariable(QObject):
 
     def ready(self) -> bool:
         return self.value is not None
+
+    def close(self):
+        # TODO: Is it a good idea that the preview buffer just does nothing on close?
+        #   If it would close, it would have to be recreated when the recording is stopped
+        #   Right now it works because it's reopened in every case, but how should the UI respond if the
+        #   flow of frames actually stopped?
+        pass

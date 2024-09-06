@@ -2,7 +2,6 @@ import dataclasses
 from dataclasses import dataclass
 from typing import List
 
-import cv2
 import numpy as np
 import torch
 from ultralytics import YOLO
@@ -16,13 +15,13 @@ class Point:
 
 
 @dataclass(slots=True)
-class Instance:
+class PoseInstance:
     conf: float
     box: np.ndarray
     pose: List[Point] = dataclasses.field(default_factory=list)
 
 
-def get_best_instance(result) -> Instance | None:
+def get_best_instance(result) -> PoseInstance | None:
     result = result.cpu().numpy()
     confidences = result.boxes.conf
 
@@ -40,7 +39,7 @@ def get_best_instance(result) -> Instance | None:
         pose_coords = result.keypoints.xyn[best_index]
         pose = [Point(conf, coords[0], coords[1]) for conf, coords in zip(pose_confs, pose_coords)]
 
-    return Instance(box_conf, box_coords, pose)
+    return PoseInstance(box_conf, box_coords, pose)
 
 
 class PoseModel:
@@ -48,10 +47,10 @@ class PoseModel:
         self.model = model
         self.device = torch.device(device)
 
-    def get_instance(self, frame: np.ndarray) -> Instance | None:
+    def get_instance(self, frame: np.ndarray) -> PoseInstance | None:
         results = self.model(frame, verbose=False, device=self.device)
         return get_best_instance(results[0])
 
-    def get_instances(self, frames: List[np.ndarray]) -> List[Instance | None]:
+    def get_instances(self, frames: List[np.ndarray]) -> List[PoseInstance | None]:
         results = self.model(frames, verbose=False, device=self.device)
         return [get_best_instance(result) for result in results]

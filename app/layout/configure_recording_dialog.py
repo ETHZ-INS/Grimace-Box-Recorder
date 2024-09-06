@@ -36,16 +36,6 @@ class Ui_DConfigureRecording(object):
         self.verticalLayout = QVBoxLayout(DConfigureRecording)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setSizeConstraint(QLayout.SetMinAndMaxSize)
-        self.label = QLabel(DConfigureRecording)
-        self.label.setObjectName(u"label")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy1)
-
-        self.verticalLayout.addWidget(self.label)
-
         self.frame = QFrame(DConfigureRecording)
         self.frame.setObjectName(u"frame")
         self.frame.setFrameShape(QFrame.StyledPanel)
@@ -71,6 +61,7 @@ class Ui_DConfigureRecording(object):
 
         self.tme_time = QTimeEdit(self.frame)
         self.tme_time.setObjectName(u"tme_time")
+        self.tme_time.setInputMethodHints(Qt.ImhPreferNumbers|Qt.ImhTime)
         self.tme_time.setTimeSpec(Qt.LocalTime)
         self.tme_time.setTime(QTime(0, 10, 0))
 
@@ -109,13 +100,12 @@ class Ui_DConfigureRecording(object):
 
     def retranslateUi(self, DConfigureRecording):
         DConfigureRecording.setWindowTitle(QCoreApplication.translate("DConfigureRecording", u"Configure Recording", None))
-        self.label.setText(QCoreApplication.translate("DConfigureRecording", u"Configure Recording", None))
         self.label_2.setText(QCoreApplication.translate("DConfigureRecording", u"Recording Mode:", None))
         self.dpd_recording_mode.setItemText(0, QCoreApplication.translate("DConfigureRecording", u"Timed", None))
         self.dpd_recording_mode.setItemText(1, QCoreApplication.translate("DConfigureRecording", u"Manual", None))
 
         self.label_3.setText(QCoreApplication.translate("DConfigureRecording", u"Duration:", None))
-        self.tme_time.setDisplayFormat(QCoreApplication.translate("DConfigureRecording", u"HH:mm:ss.zzz", None))
+        self.tme_time.setDisplayFormat(QCoreApplication.translate("DConfigureRecording", u"HH'h' mm'm' ss.zzz's'", None))
         self.label_4.setText(QCoreApplication.translate("DConfigureRecording", u"Video Codec:", None))
         self.dpd_codec.setItemText(0, QCoreApplication.translate("DConfigureRecording", u"FMP4", None))
         self.dpd_codec.setItemText(1, QCoreApplication.translate("DConfigureRecording", u"MP4V", None))

@@ -257,7 +257,7 @@ class PylonDualCameraRecorder(QThread):
 
         preview_buffer = camera.preview_buffer
         if preview_buffer is not None:
-            preview_buffer.set(frame)
+            preview_buffer.enqueue(frame)
 
         num_buffered_frames = camera.camera.NumReadyBuffers.GetValue()
         camera.buffer_fill_level = num_buffered_frames / 1000

@@ -4,6 +4,7 @@ from typing import Tuple
 
 from app.config.camera import CameraConfig
 from app.config.grimace import GrimaceConfig
+from app.config.pose_top import PoseTopConfig
 from app.config.recording import RecordingConfig
 from app.config.video_files import VideoFilesConfig
 
@@ -12,9 +13,11 @@ class ConfigV1Loader:
     @classmethod
     def parse_camera_config(cls, json_config: dict) -> CameraConfig:
         return CameraConfig(
+            camera_type=json_config["camera_type"],
             camera_id=json_config["camera_id"],
             config_file=json_config["config_file"],
             fps=json_config["fps"],
+            video_file=json_config["video_file"],
         )
 
     @classmethod
@@ -32,6 +35,7 @@ class ConfigV1Loader:
             top_templates=json_config["top_templates"],
             front_templates=json_config["front_templates"],
             grimace_results_templates=json_config["grimace_results_template"],
+            pose_results_templates=json_config["pose_results_template"]
         )
 
     @classmethod
@@ -46,23 +50,35 @@ class ConfigV1Loader:
         )
 
     @classmethod
-    def parse(cls, json_config: dict) -> Tuple[CameraConfig, CameraConfig, RecordingConfig, VideoFilesConfig, GrimaceConfig]:
+    def parse_pose_config(cls, json_config: dict) -> PoseTopConfig:
+        return PoseTopConfig(
+            enabled=json_config["enabled"],
+            show_preview=json_config["show_preview"],
+            pose_model=json_config["pose_model"],
+            pose_device=json_config["pose_device"],
+        )
+
+    @classmethod
+    def parse(cls, json_config: dict) -> Tuple[CameraConfig, CameraConfig, RecordingConfig, VideoFilesConfig, GrimaceConfig, PoseTopConfig]:
         camera_top_config = ConfigV1Loader.parse_camera_config(json_config["camera_top"])
         camera_front_config = ConfigV1Loader.parse_camera_config(json_config["camera_front"])
         recording_config = ConfigV1Loader.parse_recording_config(json_config["recording"])
         video_files_config = ConfigV1Loader.parse_video_files_config(json_config["video_files"])
         grimace_config = ConfigV1Loader.parse_grimace_config(json_config["grimace"])
+        pose_top_config = ConfigV1Loader.parse_pose_config(json_config["pose_top"])
 
-        return camera_top_config, camera_front_config, recording_config, video_files_config, grimace_config
+        return camera_top_config, camera_front_config, recording_config, video_files_config, grimace_config, pose_top_config
 
 
 class ConfigSerializer:
     @classmethod
     def serialize_camera_config(cls, camera_config: CameraConfig) -> dict:
         return {
+            "camera_type": camera_config.camera_type,
             "camera_id": camera_config.camera_id,
             "config_file": camera_config.config_file,
             "fps": camera_config.fps,
+            "video_file": camera_config.video_file
         }
 
     @classmethod
@@ -80,6 +96,7 @@ class ConfigSerializer:
             "top_templates": video_files_config.top_templates,
             "front_templates": video_files_config.front_templates,
             "grimace_results_template": video_files_config.grimace_results_templates,
+            "pose_results_template": video_files_config.pose_results_templates,
         }
 
     @classmethod
@@ -93,10 +110,19 @@ class ConfigSerializer:
             "grimace_scoring_device": grimace_config.grimace_scoring_device,
         }
 
+    @classmethod
+    def serialize_pose_config(cls, pose_config: PoseTopConfig):
+        return {
+            "enabled": pose_config.enabled,
+            "show_preview": pose_config.show_preview,
+            "pose_model": pose_config.pose_model,
+            "pose_device": pose_config.pose_device,
+        }
+
 
 class ConfigLoader:
     @classmethod
-    def load(cls, config_file: Path) -> Tuple[CameraConfig, CameraConfig, RecordingConfig, VideoFilesConfig, GrimaceConfig]:
+    def load(cls, config_file: Path) -> Tuple[CameraConfig, CameraConfig, RecordingConfig, VideoFilesConfig, GrimaceConfig, PoseTopConfig]:
         with config_file.open("r") as f:
             json_config = json.load(f)
 
@@ -109,7 +135,8 @@ class ConfigLoader:
 
     @classmethod
     def save(cls, config_file: Path, camera_top_config: CameraConfig, camera_front_config: CameraConfig,
-             recording_config: RecordingConfig, video_files_config: VideoFilesConfig, grimace_config: GrimaceConfig):
+             recording_config: RecordingConfig, video_files_config: VideoFilesConfig, grimace_config: GrimaceConfig,
+             pose_top_config: PoseTopConfig):
         with config_file.open("w") as f:
             json.dump({
                 "version": "v1",
@@ -118,4 +145,5 @@ class ConfigLoader:
                 "recording": ConfigSerializer.serialize_recording_config(recording_config),
                 "video_files": ConfigSerializer.serialize_video_files_config(video_files_config),
                 "grimace": ConfigSerializer.serialize_grimace_config(grimace_config),
+                "pose_top": ConfigSerializer.serialize_pose_config(pose_top_config),
             }, f, indent=4)

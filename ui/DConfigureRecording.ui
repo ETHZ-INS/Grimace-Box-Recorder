@@ -39,19 +39,6 @@
     <enum>QLayout::SetMinAndMaxSize</enum>
    </property>
    <item>
-    <widget class="QLabel" name="label">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Configure Recording</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QFrame" name="frame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -90,8 +77,11 @@
       </item>
       <item row="1" column="1">
        <widget class="QTimeEdit" name="tme_time">
+        <property name="inputMethodHints">
+         <set>Qt::ImhPreferNumbers|Qt::ImhTime</set>
+        </property>
         <property name="displayFormat">
-         <string>HH:mm:ss.zzz</string>
+         <string>HH'h' mm'm' ss.zzz's'</string>
         </property>
         <property name="timeSpec">
          <enum>Qt::LocalTime</enum>

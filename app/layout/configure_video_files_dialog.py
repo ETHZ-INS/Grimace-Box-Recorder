@@ -34,23 +34,13 @@ class Ui_DConfigureVideoFiles(object):
         DConfigureVideoFiles.setMaximumSize(QSize(800, 250))
         self.verticalLayout = QVBoxLayout(DConfigureVideoFiles)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.lbl_title = QLabel(DConfigureVideoFiles)
-        self.lbl_title.setObjectName(u"lbl_title")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.lbl_title.sizePolicy().hasHeightForWidth())
-        self.lbl_title.setSizePolicy(sizePolicy1)
-
-        self.verticalLayout.addWidget(self.lbl_title)
-
         self.frame = QFrame(DConfigureVideoFiles)
         self.frame.setObjectName(u"frame")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
-        self.frame.setSizePolicy(sizePolicy2)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
+        self.frame.setSizePolicy(sizePolicy1)
         self.frame.setFrameShape(QFrame.StyledPanel)
         self.frame.setFrameShadow(QFrame.Raised)
         self.formLayout = QFormLayout(self.frame)
@@ -123,6 +113,16 @@ class Ui_DConfigureVideoFiles(object):
 
         self.formLayout.setWidget(4, QFormLayout.FieldRole, self.txt_template_grimace)
 
+        self.label_6 = QLabel(self.frame)
+        self.label_6.setObjectName(u"label_6")
+
+        self.formLayout.setWidget(5, QFormLayout.LabelRole, self.label_6)
+
+        self.txt_template_pose = QLineEdit(self.frame)
+        self.txt_template_pose.setObjectName(u"txt_template_pose")
+
+        self.formLayout.setWidget(5, QFormLayout.FieldRole, self.txt_template_pose)
+
 
         self.verticalLayout.addWidget(self.frame)
 
@@ -141,7 +141,6 @@ class Ui_DConfigureVideoFiles(object):
 
     def retranslateUi(self, DConfigureVideoFiles):
         DConfigureVideoFiles.setWindowTitle(QCoreApplication.translate("DConfigureVideoFiles", u"Configure Video Files", None))
-        self.lbl_title.setText(QCoreApplication.translate("DConfigureVideoFiles", u"Configure Output Files", None))
         self.label_4.setText(QCoreApplication.translate("DConfigureVideoFiles", u"Target Directory:", None))
         self.lbl_selected_folder.setText(QCoreApplication.translate("DConfigureVideoFiles", u"No Folder Selected", None))
         self.btn_select_folder.setText(QCoreApplication.translate("DConfigureVideoFiles", u"...", None))
@@ -156,5 +155,7 @@ class Ui_DConfigureVideoFiles(object):
         self.txt_template_front.setText(QCoreApplication.translate("DConfigureVideoFiles", u"{recording_number}_front.avi", None))
         self.label_5.setText(QCoreApplication.translate("DConfigureVideoFiles", u"Grimace Results:", None))
         self.txt_template_grimace.setText(QCoreApplication.translate("DConfigureVideoFiles", u"{recording_number}_grimace_results.csv", None))
+        self.label_6.setText(QCoreApplication.translate("DConfigureVideoFiles", u"Pose Results:", None))
+        self.txt_template_pose.setText(QCoreApplication.translate("DConfigureVideoFiles", u"{recording_number}_pose_estimation_results.csv", None))
     # retranslateUi
 

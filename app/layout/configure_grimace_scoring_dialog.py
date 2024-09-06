@@ -17,27 +17,18 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox, QComboBox,
     QDialog, QDialogButtonBox, QFormLayout, QFrame,
-    QLabel, QSizePolicy, QVBoxLayout, QWidget)
+    QLabel, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
 
 class Ui_DConfigureGrimaceScoring(object):
     def setupUi(self, DConfigureGrimaceScoring):
         if not DConfigureGrimaceScoring.objectName():
             DConfigureGrimaceScoring.setObjectName(u"DConfigureGrimaceScoring")
-        DConfigureGrimaceScoring.resize(400, 300)
-        DConfigureGrimaceScoring.setMinimumSize(QSize(400, 300))
-        DConfigureGrimaceScoring.setMaximumSize(QSize(400, 300))
+        DConfigureGrimaceScoring.resize(400, 280)
+        DConfigureGrimaceScoring.setMinimumSize(QSize(400, 280))
+        DConfigureGrimaceScoring.setMaximumSize(QSize(400, 280))
         self.verticalLayout = QVBoxLayout(DConfigureGrimaceScoring)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.label = QLabel(DConfigureGrimaceScoring)
-        self.label.setObjectName(u"label")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy)
-
-        self.verticalLayout.addWidget(self.label)
-
         self.frame = QFrame(DConfigureGrimaceScoring)
         self.frame.setObjectName(u"frame")
         self.frame.setFrameShape(QFrame.StyledPanel)
@@ -83,6 +74,11 @@ class Ui_DConfigureGrimaceScoring(object):
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.dpd_frame_interval)
 
+        self.label_6 = QLabel(self.frame)
+        self.label_6.setObjectName(u"label_6")
+
+        self.formLayout.setWidget(6, QFormLayout.LabelRole, self.label_6)
+
         self.label_4 = QLabel(self.frame)
         self.label_4.setObjectName(u"label_4")
 
@@ -92,16 +88,6 @@ class Ui_DConfigureGrimaceScoring(object):
         self.dpd_frame_quality_device.setObjectName(u"dpd_frame_quality_device")
 
         self.formLayout.setWidget(5, QFormLayout.FieldRole, self.dpd_frame_quality_device)
-
-        self.label_6 = QLabel(self.frame)
-        self.label_6.setObjectName(u"label_6")
-
-        self.formLayout.setWidget(6, QFormLayout.LabelRole, self.label_6)
-
-        self.label_8 = QLabel(self.frame)
-        self.label_8.setObjectName(u"label_8")
-
-        self.formLayout.setWidget(7, QFormLayout.LabelRole, self.label_8)
 
         self.dpd_face_cropper_device = QComboBox(self.frame)
         self.dpd_face_cropper_device.setObjectName(u"dpd_face_cropper_device")
@@ -113,10 +99,19 @@ class Ui_DConfigureGrimaceScoring(object):
 
         self.formLayout.setWidget(7, QFormLayout.FieldRole, self.dpd_grimace_scoring_device)
 
+        self.label_8 = QLabel(self.frame)
+        self.label_8.setObjectName(u"label_8")
+
+        self.formLayout.setWidget(7, QFormLayout.LabelRole, self.label_8)
+
         self.label_5 = QLabel(self.frame)
         self.label_5.setObjectName(u"label_5")
 
         self.formLayout.setWidget(4, QFormLayout.LabelRole, self.label_5)
+
+        self.verticalSpacer = QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+
+        self.formLayout.setItem(3, QFormLayout.LabelRole, self.verticalSpacer)
 
 
         self.verticalLayout.addWidget(self.frame)
@@ -138,11 +133,10 @@ class Ui_DConfigureGrimaceScoring(object):
 
     def retranslateUi(self, DConfigureGrimaceScoring):
         DConfigureGrimaceScoring.setWindowTitle(QCoreApplication.translate("DConfigureGrimaceScoring", u"Configure Grimace Scoring", None))
-        self.label.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Configure Grimace Scoring", None))
         self.label_7.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Enable Grimace Scoring:", None))
         self.chb_enable_grimace.setText("")
         self.label_2.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Grimace Model:", None))
-        self.dpd_grimace_model.setItemText(0, QCoreApplication.translate("DConfigureGrimaceScoring", u"V1 - SuperScorer", None))
+        self.dpd_grimace_model.setItemText(0, QCoreApplication.translate("DConfigureGrimaceScoring", u"V1 - HohlBot", None))
 
         self.label_3.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Frame Interval:", None))
         self.dpd_frame_interval.setItemText(0, QCoreApplication.translate("DConfigureGrimaceScoring", u"10 Seconds", None))
@@ -152,18 +146,18 @@ class Ui_DConfigureGrimaceScoring(object):
         self.dpd_frame_interval.setItemText(4, QCoreApplication.translate("DConfigureGrimaceScoring", u"2 Minutes", None))
         self.dpd_frame_interval.setItemText(5, QCoreApplication.translate("DConfigureGrimaceScoring", u"5 Minutes", None))
 
+        self.label_6.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Face Cropper Model:", None))
         self.label_4.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Frame Quality Model:", None))
 #if QT_CONFIG(tooltip)
         self.dpd_frame_quality_device.setToolTip(QCoreApplication.translate("DConfigureGrimaceScoring", u"Select which device should be used to run the frame quality model", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_6.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Face Cropper Model:", None))
-        self.label_8.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Grimace Scoring Model:", None))
 #if QT_CONFIG(tooltip)
         self.dpd_face_cropper_device.setToolTip(QCoreApplication.translate("DConfigureGrimaceScoring", u"Select which device should be used to run the frame cropper model", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.dpd_grimace_scoring_device.setToolTip(QCoreApplication.translate("DConfigureGrimaceScoring", u"Select which device should be used to run the grimace scoring model", None))
 #endif // QT_CONFIG(tooltip)
+        self.label_8.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Grimace Scoring Model:", None))
         self.label_5.setText(QCoreApplication.translate("DConfigureGrimaceScoring", u"Device Selection:", None))
     # retranslateUi
 

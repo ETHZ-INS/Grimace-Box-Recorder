@@ -5,7 +5,7 @@ from typing import Tuple
 import numpy as np
 
 from app.dataflow.qqueue import QQueue
-from app.dataflow.queue_reader import QueueReader
+from app.process.queue_process import QueueProcess
 
 import logging
 
@@ -14,10 +14,10 @@ from util.trace import Trace
 logger = logging.getLogger("grimace_recorder.app.analysis.grimace_results_writer")
 
 
-class GrimaceResultWriter(QueueReader):
+class GrimaceResultWriter(QueueProcess):
     @Trace.trace(logger)
-    def __init__(self, target_file: Path, grimace_results_buffer: QQueue[Tuple[int, float, np.ndarray]]):
-        super(GrimaceResultWriter, self).__init__(grimace_results_buffer, wait_time=1)
+    def __init__(self, target_file: Path, queue_size: int):
+        super(GrimaceResultWriter, self).__init__(queue_size, wait_time=1)
 
         self.target_file = target_file
 
@@ -49,3 +49,16 @@ class GrimaceResultWriter(QueueReader):
         with self.target_file.open("a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([frame_index, timestamp, *grimace_scores, avg_score])
+
+    def check_health(self, *args, prefix: str = "", fill_threshold: float = 0.1, **kwargs) -> dict:
+        report = {"warnings": {}}
+
+        queue_fill_level = self.queue.get_fill_level()
+        report[prefix+"grimace_results_writer_queue_fill_level"] = queue_fill_level
+
+        warning = None
+        if queue_fill_level > fill_threshold:
+            warning = f"Grimace results writer queue fill level: {queue_fill_level * 100:.2f}%"
+        report["warnings"][prefix+"grimace_results_writer_queue_fill"] = warning
+
+        return report

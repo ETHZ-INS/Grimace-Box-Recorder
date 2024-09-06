@@ -9,5 +9,6 @@ class VideoFilesConfig:
     top_templates: Dict[str, str] = field(default_factory=dict)
     front_templates: Dict[str, str] = field(default_factory=dict)
     grimace_results_templates: Dict[str, str] = field(default_factory=dict)
+    pose_results_templates: Dict[str, str] = field(default_factory=dict)
 
     NAMING_MODES = ["Incremental Number", "Start Time", "Custom Template"]

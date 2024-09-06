@@ -1,4 +1,5 @@
 import threading
+from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, Optional, Union
 
 from PySide6.QtCore import QObject, Signal
@@ -6,7 +7,22 @@ from PySide6.QtCore import QObject, Signal
 T = TypeVar('T')
 
 
-class QQueue(QObject, Generic[T]):
+class IQueue(ABC, Generic[T]):
+    @abstractmethod
+    def enqueue(self, item):
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self):
+        raise NotImplementedError
+
+
+# Workaround for multiple inheritance with QObject
+class QQueueMeta(type(QObject), type(IQueue)):
+    pass
+
+
+class QQueue(QObject, IQueue[T], metaclass=QQueueMeta):
     """
     A thread-safe queue with a fixed maximum length
     implemented using a circular buffer
@@ -18,7 +34,7 @@ class QQueue(QObject, Generic[T]):
     item_added = Signal()
     item_removed = Signal()
 
-    def __init__(self, size: int, void: bool = False):
+    def __init__(self, size: int):
         super(QQueue, self).__init__()
 
         self.size = size
@@ -26,13 +42,14 @@ class QQueue(QObject, Generic[T]):
         self.head = 0
         self.tail = 0
         self.full = False
-        self.void = void
+        self.closed = False
         self.lock = threading.Lock()
 
     def enqueue(self, item: Union[T, End]):
+        if self.closed:
+            return
+
         with self.lock:
-            if self.void:
-                return
 
             self.queue[self.tail] = item
             if self.full:
@@ -55,6 +72,7 @@ class QQueue(QObject, Generic[T]):
 
     def close(self):
         self.enqueue(self.End)
+        self.closed = True
 
     def _is_empty(self):
         return not self.full and self.head == self.tail
@@ -81,7 +99,3 @@ class QQueue(QObject, Generic[T]):
     def get_fill_level(self):
         with self.lock:
             return self._get_fill_level()
-
-    def set_void(self):
-        with self.lock:
-            self.void = True
