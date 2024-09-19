@@ -12,3 +12,11 @@ class GrimaceConfig:
     grimace_scoring_device: str = "cpu"
 
     GRIMACE_MODELS = ["V1 - HohlBot", "Demo (Fake Mouse)"]
+    FRAME_INTERVAL_OPTIONS = [
+        ("10 Seconds", 10.0),
+        ("20 Seconds", 20.0),
+        ("30 Seconds", 30.0),
+        ("1 Minute", 60.0),
+        ("2 Minutes", 120.0),
+        ("5 Minutes", 300.0)
+    ]

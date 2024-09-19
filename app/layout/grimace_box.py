@@ -16,16 +16,17 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QLayout, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
-    QTabWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
+    QLabel, QLayout, QMainWindow, QMenu,
+    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
+    QStatusBar, QTabWidget, QVBoxLayout, QWidget)
 
 class Ui_WGrimaceBox(object):
     def setupUi(self, WGrimaceBox):
         if not WGrimaceBox.objectName():
             WGrimaceBox.setObjectName(u"WGrimaceBox")
-        WGrimaceBox.resize(1235, 803)
+        WGrimaceBox.resize(1235, 774)
+        WGrimaceBox.setFocusPolicy(Qt.StrongFocus)
         WGrimaceBox.setTabShape(QTabWidget.Rounded)
         self.action_save_project = QAction(WGrimaceBox)
         self.action_save_project.setObjectName(u"action_save_project")
@@ -183,7 +184,7 @@ class Ui_WGrimaceBox(object):
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.lbl_warnings.sizePolicy().hasHeightForWidth())
         self.lbl_warnings.setSizePolicy(sizePolicy3)
-        self.lbl_warnings.setStyleSheet(u"")
+        self.lbl_warnings.setStyleSheet(u"color: orange")
         self.lbl_warnings.setFrameShadow(QFrame.Plain)
         self.lbl_warnings.setTextFormat(Qt.MarkdownText)
         self.lbl_warnings.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
@@ -224,7 +225,17 @@ class Ui_WGrimaceBox(object):
         self.frame.setFrameShadow(QFrame.Raised)
         self.horizontalLayout_2 = QHBoxLayout(self.frame)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.btn_record = QPushButton(self.frame)
+        self.horizontalLayout_2.setContentsMargins(-1, 9, 9, -1)
+        self.frame_7 = QFrame(self.frame)
+        self.frame_7.setObjectName(u"frame_7")
+        self.frame_7.setMinimumSize(QSize(250, 0))
+        self.frame_7.setMaximumSize(QSize(200, 16777215))
+        self.frame_7.setFrameShape(QFrame.NoFrame)
+        self.frame_7.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_4 = QHBoxLayout(self.frame_7)
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.btn_record = QPushButton(self.frame_7)
         self.btn_record.setObjectName(u"btn_record")
         sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.MinimumExpanding)
         sizePolicy5.setHorizontalStretch(0)
@@ -233,7 +244,20 @@ class Ui_WGrimaceBox(object):
         self.btn_record.setSizePolicy(sizePolicy5)
         self.btn_record.setMinimumSize(QSize(100, 0))
 
-        self.horizontalLayout_2.addWidget(self.btn_record)
+        self.horizontalLayout_4.addWidget(self.btn_record)
+
+        self.chb_identifier = QCheckBox(self.frame_7)
+        self.chb_identifier.setObjectName(u"chb_identifier")
+        self.chb_identifier.setChecked(True)
+
+        self.horizontalLayout_4.addWidget(self.chb_identifier)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_4.addItem(self.horizontalSpacer_3)
+
+
+        self.horizontalLayout_2.addWidget(self.frame_7)
 
         self.lbl_message = QLabel(self.frame)
         self.lbl_message.setObjectName(u"lbl_message")
@@ -247,7 +271,8 @@ class Ui_WGrimaceBox(object):
         self.lbl_time.setObjectName(u"lbl_time")
         sizePolicy5.setHeightForWidth(self.lbl_time.sizePolicy().hasHeightForWidth())
         self.lbl_time.setSizePolicy(sizePolicy5)
-        self.lbl_time.setMinimumSize(QSize(100, 0))
+        self.lbl_time.setMinimumSize(QSize(250, 0))
+        self.lbl_time.setMaximumSize(QSize(200, 16777215))
         self.lbl_time.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.horizontalLayout_2.addWidget(self.lbl_time)
@@ -367,7 +392,7 @@ class Ui_WGrimaceBox(object):
         self.lbl_video_top.setText(QCoreApplication.translate("WGrimaceBox", u"Top camera not configured", None))
         self.label_2.setText(QCoreApplication.translate("WGrimaceBox", u"Front Camera", None))
         self.lbl_video_front.setText(QCoreApplication.translate("WGrimaceBox", u"Front camera not configured", None))
-        self.lbl_overview.setText(QCoreApplication.translate("WGrimaceBox", u"### Overview for next recording:  \n"
+        self.lbl_overview.setText(QCoreApplication.translate("WGrimaceBox", u"## Overview for next recording:  \n"
 "Recording Number: 1  \n"
 "Recording Duration: 00:10:00.000  \n"
 "Top Camera Frame Rate: 30.0 FPS  \n"
@@ -375,12 +400,13 @@ class Ui_WGrimaceBox(object):
 "Top Video Filename: top_1.avi  \n"
 "Front Video Filename: front_1.avi  \n"
 "", None))
-        self.lbl_warnings.setText("")
+        self.lbl_warnings.setText(QCoreApplication.translate("WGrimaceBox", u"## Warnings", None))
         self.lbl_debug_mode.setText(QCoreApplication.translate("WGrimaceBox", u"Debug Mode", None))
 #if QT_CONFIG(tooltip)
         self.btn_record.setToolTip("")
 #endif // QT_CONFIG(tooltip)
         self.btn_record.setText(QCoreApplication.translate("WGrimaceBox", u"Start Recording", None))
+        self.chb_identifier.setText(QCoreApplication.translate("WGrimaceBox", u"Ask for Identifier", None))
         self.lbl_message.setText(QCoreApplication.translate("WGrimaceBox", u"Ready to record", None))
         self.lbl_time.setText(QCoreApplication.translate("WGrimaceBox", u"00:00:00", None))
 #if QT_CONFIG(tooltip)

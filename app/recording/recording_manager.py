@@ -2,13 +2,12 @@ import os
 import sys
 import time
 from copy import deepcopy
+from enum import Enum
 from pathlib import Path, PurePath
-from typing import Optional, Dict, List, Literal
+from typing import Optional, Dict, List
 
 import cv2
-import numpy as np
 import torch
-from PySide6 import QtCore
 from PySide6.QtCore import QObject, Signal, QTimer, QThread
 from ultralytics import YOLO
 
@@ -18,13 +17,13 @@ from app.config.pose_top import PoseTopConfig
 from app.config.recording import RecordingConfig
 from app.config.video_files import VideoFilesConfig
 from app.dataflow.qlist import QList
-from app.dataflow.qqueue import IQueue
 from app.dataflow.qvariable import QVariable
-from app.recording.FPSRenderer import FPSRenderer
+from app.recording.camera_recorder.camera_factory import CameraFactory
 from app.recording.camera_recorder.source.base_source import CameraSource
 from app.recording.front_video_pipeline_builder import FrontVideoPipelineBuilder
 from app.recording.camera_recorder.dual_camera_recorder import DualCameraRecorder, build_camera_source
 from app.recording.recording_context import RecordingContext
+from app.recording.recording_timer import RecordingTimer
 from app.recording.top_video_pipeline_builder import TopVideoPipelineBuilder
 from app.recording.video_pipeline import VideoPipeline
 from app.recording.video_writer import BufferVideoWriter
@@ -127,15 +126,13 @@ class Recording:
     """
     Represents a recording that is ready to run. May also be a preview that does not save any files.
     """
-    def __init__(self, camera_recorder: DualCameraRecorder, top_video_pipeline: VideoPipeline,
-                 front_video_pipeline: VideoPipeline, recording_context: RecordingContext | None):
-        self.camera_recorder = camera_recorder
+    def __init__(self, top_video_pipeline: VideoPipeline, front_video_pipeline: VideoPipeline):
         self.top_video_pipeline = top_video_pipeline
         self.front_video_pipeline = front_video_pipeline
-        self.recording_context = recording_context
 
         self.running = False
         self.analysis_running = False
+        self.finished = False
 
     @Trace.trace(logger)
     def start(self):
@@ -143,48 +140,18 @@ class Recording:
             # TODO: Should this be an error? In production it might be better to just ignore/log it
             raise ValueError("Recording already running")
 
-        # TODO: stop preview before calling start
-        #self.stop_preview()
-
-        # TODO: Stop before calling start
-        #if self.camera_recorder.isRunning():
-        #    self.camera_recorder.stop()
-        #    self.camera_recorder.wait()
-
         self.running = True
         # TODO: Should analysis_running always be true or only when actually running analysis?
         self.analysis_running = True
 
-        self.camera_recorder.top_camera.set_video_buffer(self.top_video_pipeline.input_queue)
-        self.camera_recorder.front_camera.set_video_buffer(self.front_video_pipeline.input_queue)
-
-        self.camera_recorder.set_recording_context(self.recording_context)
-
         self.top_video_pipeline.start()
         self.front_video_pipeline.start()
-
-        self.camera_recorder.start()
 
     @Trace.trace(logger)
     def stop(self):
         if not self.running:
             # TODO: Should this be an error?
-
             raise ValueError("Recording not running")
-
-        # Stop the recorder to stop the flow of frames through the pipeline
-        # The other parts of the pipeline will stop themselves when they're done processing the remaining frames
-        self.camera_recorder.stop()
-        self.camera_recorder.wait()
-
-        # Disconnect the pipelines from the camera recorder
-        self.camera_recorder.top_camera.set_video_buffer(None)
-        self.camera_recorder.front_camera.set_video_buffer(None)
-
-        # TODO: Does this order make sense?
-        self.camera_recorder.set_recording_context(None)
-        if self.recording_context is not None:
-            self.recording_context.stop()
 
         # TODO: Some kind of loading screen while waiting for the pipelines to stop?
 
@@ -292,13 +259,12 @@ class RecordingBuilder(QObject):
         self.recording_number: int = 1
 
         self.video_files_config = VideoFilesConfig()
-        self.top_camera_config = CameraConfig()
-        self.front_camera_config = CameraConfig()
         self.recording_config = RecordingConfig()
         self.grimace_config = GrimaceConfig()
         self.pose_config = PoseTopConfig()
 
         self.recording_duration: float | None = None
+        self.front_camera_fps: float | None = None
 
         self.top_video_writer_builder: VideoWriterBuilder = VideoWriterBuilder()
         self.front_video_writer_builder: VideoWriterBuilder = VideoWriterBuilder()
@@ -316,6 +282,20 @@ class RecordingBuilder(QObject):
 
     def set_grimace_results_list(self, grimace_results_list: QList):
         self.front_video_pipeline_builder.set_results_preview_queue(grimace_results_list)
+        return self
+
+    def set_top_camera_specs(self, width: int, height: int, fps: float):
+        self.top_video_writer_builder.set_width(width)
+        self.top_video_writer_builder.set_height(height)
+        self.top_video_writer_builder.set_fps(fps)
+        self.top_video_pipeline_builder.set_target_frame_rate(fps)
+        return self
+
+    def set_front_camera_specs(self, width: int, height: int, fps: float):
+        self.front_video_writer_builder.set_width(width)
+        self.front_video_writer_builder.set_height(height)
+        self.front_video_writer_builder.set_fps(fps)
+        self.front_camera_fps = fps
         return self
 
     def configure_video_files(self, video_files_config: VideoFilesConfig):
@@ -377,23 +357,12 @@ class RecordingBuilder(QObject):
 
         return self
 
-    def configure_top_camera(self, camera_config: CameraConfig):
-        self.top_camera_config = deepcopy(camera_config)
-        return self
-
-    def configure_front_camera(self, camera_config: CameraConfig):
-        self.front_camera_config = deepcopy(camera_config)
-        return self
-
     def configure_recording(self, recording_config: RecordingConfig):
         self.recording_config = deepcopy(recording_config)
         fourcc = cv2.VideoWriter.fourcc(*recording_config.codec)
         print(fourcc)
         self.top_video_writer_builder.set_fourcc(fourcc)
         self.front_video_writer_builder.set_fourcc(fourcc)
-
-        self.recording_duration = self.recording_config.duration if self.recording_config.mode == "Timed" else None
-
         return self
 
     def configure_grimace(self, grimace_config: GrimaceConfig):
@@ -482,58 +451,31 @@ class RecordingBuilder(QObject):
 
         return self
 
-    def build_top_camera(self) -> CameraSource:
-        if self.top_camera_config is None:
-            raise ValueError("Top camera not configured")
-        return build_camera_source(self.top_camera_config)
-
-    def build_front_camera(self) -> CameraSource:
-        if self.front_camera_config is None:
-            raise ValueError("Front camera not configured")
-        return build_camera_source(self.front_camera_config)
-
-    def build_top_video_pipeline(self, camera: CameraSource) -> VideoPipeline:
-        self.top_video_writer_builder.set_width(camera.get_width())
-        self.top_video_writer_builder.set_height(camera.get_height())
-        self.top_video_writer_builder.set_fps(camera.get_fps())
+    def build_top_video_pipeline(self) -> VideoPipeline:
         video_writer = self.top_video_writer_builder.build()
         self.top_video_pipeline_builder.set_video_writer(video_writer)
-
-        self.top_video_pipeline_builder.set_target_frame_rate(camera.get_fps())
-
         return self.top_video_pipeline_builder.build()
 
-    def build_front_video_pipeline(self, camera: CameraSource) -> VideoPipeline:
-        self.front_video_writer_builder.set_width(camera.get_width())
-        self.front_video_writer_builder.set_height(camera.get_height())
-        self.front_video_writer_builder.set_fps(camera.get_fps())
+    def build_front_video_pipeline(self) -> VideoPipeline:
         video_writer = self.front_video_writer_builder.build()
         self.front_video_pipeline_builder.set_video_writer(video_writer)
 
         if self.grimace_config is not None and self.grimace_config.enabled:
-            frames_per_interval = round(self.grimace_config.frame_interval * camera.get_fps())
+            frames_per_interval = round(self.grimace_config.frame_interval * self.front_camera_fps)
             self.front_video_pipeline_builder.set_frames_per_interval(frames_per_interval)
 
         return self.front_video_pipeline_builder.build()
 
-    def build(self, camera_recorder: DualCameraRecorder, preview: bool = False) -> Recording:
-        top_camera = self.build_top_camera()
-        front_camera = self.build_front_camera()
-
+    def build(self, preview: bool = False) -> Recording:
         if preview:
             top_video_pipeline = self.top_video_pipeline_builder.build(preview=True)
             front_video_pipeline = self.front_video_pipeline_builder.build(preview=True)
             recording_context = None
         else:
-            top_video_pipeline = self.build_top_video_pipeline(top_camera)
-            front_video_pipeline = self.build_front_video_pipeline(front_camera)
+            top_video_pipeline = self.build_top_video_pipeline()
+            front_video_pipeline = self.build_front_video_pipeline()
 
-            recording_context = RecordingContext(self.recording_duration)
-
-        camera_recorder.set_top_camera(top_camera)
-        camera_recorder.set_front_camera(front_camera)
-
-        return Recording(camera_recorder, top_video_pipeline, front_video_pipeline, recording_context)
+        return Recording(top_video_pipeline, front_video_pipeline)
 
     def get_not_ready_reason(self) -> Optional[str]:
         top_video_writer_not_ready_reason = self.top_video_writer_builder.get_not_ready_reason()
@@ -617,6 +559,176 @@ class RecordingBuilder(QObject):
                 return "Pose model not configured"
             if self.pose_config.pose_device is None:
                 return "Pose device not configured"
+
+
+class RecordingManager2(QObject):
+    class RecordingState(Enum):
+        Idle = 0
+        Preview = 1
+        Recording = 2
+
+    recording_started_signal = Signal()
+    recording_stopped_signal = Signal()
+    timestamp_signal = Signal(float)
+
+    def __init__(self):
+        super().__init__()
+
+        # TODO: Temporary Solution
+        camera_identifier_model = CameraIdentifierModel(device="cpu")
+        # TODO: What is map_location?
+        model_weights = torch.load(super_scorer_model_files["camera_identifier"],
+                                   map_location=lambda storage, loc: storage)
+        camera_identifier_model.load_state_dict(model_weights)
+        self.camera_identifier = CameraIdentifier(camera_identifier_model)
+
+        self.camera_recorder = DualCameraRecorder(self.camera_identifier)
+        # TODO: Thread priority
+
+        self.recording_builder = RecordingBuilder()
+
+        self.top_camera_config = CameraConfig()
+        self.front_camera_config = CameraConfig()
+
+        self.top_camera = None
+        self.front_camera = None
+
+        self.recording: Recording | None = None
+        self.recording_duration: float | None = None
+        self.recording_timer: RecordingTimer | None = None
+
+        self.state = self.RecordingState.Idle
+
+    def configure_top_camera(self, config: CameraConfig):
+        if self.state == self.RecordingState.Recording:
+            raise ValueError("Cannot configure camera while recording is running")
+
+        if self.state == self.RecordingState.Preview:
+            self.stop_preview()
+
+        self.top_camera_config = deepcopy(config)
+
+        self.camera_recorder.set_top_camera(None)  # This closes the old camera
+
+        self.top_camera = CameraFactory.create_camera(config)
+        self.camera_recorder.set_top_camera(self.top_camera)
+
+        width, height, fps = self.top_camera.get_width(), self.top_camera.get_height(), self.top_camera.get_fps()
+        self.recording_builder.set_top_camera_specs(width, height, fps)
+
+    def configure_front_camera(self, config: CameraConfig):
+        if self.camera_recorder.running:
+            raise ValueError("Cannot configure camera while camera recorder is running")
+
+        if self.state == self.RecordingState.Preview:
+            self.stop_preview()
+
+        self.front_camera_config = deepcopy(config)
+
+        self.camera_recorder.set_front_camera(None)  # This closes the old camera
+
+        self.front_camera = CameraFactory.create_camera(config)
+        self.camera_recorder.set_front_camera(self.front_camera)
+
+        width, height, fps = self.front_camera.get_width(), self.front_camera.get_height(), self.front_camera.get_fps()
+        self.recording_builder.set_front_camera_specs(width, height, fps)
+
+    def configure_recording(self, config: RecordingConfig):
+        self.recording_duration = config.duration if config.mode == "Timed" else None
+        self.recording_builder.configure_recording(config)
+
+    def configure_video_files(self, config: VideoFilesConfig):
+        self.recording_builder.configure_video_files(config)
+
+    def configure_grimace(self, config: GrimaceConfig):
+        self.recording_builder.configure_grimace(config)
+
+    def configure_pose_tracking(self, config: PoseTopConfig):
+        self.recording_builder.configure_pose_estimation(config)
+
+    def start_recording(self):
+        if self.state == self.RecordingState.Recording:
+            raise ValueError("Recording already running")
+
+        if self.state == self.RecordingState.Preview:
+            self.stop_preview()
+
+        self.recording = self.recording_builder.build()
+        self.recording_timer = RecordingTimer(self.recording.top_video_pipeline.input_queue, self.recording_duration)
+        self.recording_timer.time_signal.connect(self.timestamp_signal)
+
+        self.camera_recorder.top_camera.set_video_buffer(self.recording_timer)
+        self.camera_recorder.front_camera.set_video_buffer(self.recording.front_video_pipeline.input_queue)
+
+        self.recording.start()
+        self.recording_timer.start()
+        self.camera_recorder.start()
+
+        self.state = self.RecordingState.Recording
+
+        self.recording_started_signal.emit()
+
+    def start_preview(self):
+        if self.state == self.RecordingState.Recording:
+            raise ValueError("Cannot start preview while recording is running")
+
+        if self.state == self.RecordingState.Preview:
+            return
+
+        self.recording = self.recording_builder.build(preview=True)
+        self.camera_recorder.top_camera.set_video_buffer(self.recording.top_video_pipeline.input_queue)
+        self.camera_recorder.front_camera.set_video_buffer(self.recording.front_video_pipeline.input_queue)
+        self.camera_recorder.set_recording_context(None)
+
+        self.recording.start()
+        self.camera_recorder.start()
+
+        self.state = self.RecordingState.Preview
+
+    def stop_preview(self):
+        if self.state == self.RecordingState.Idle:
+            return
+
+        if self.state == self.RecordingState.Recording:
+            raise ValueError("Cannot stop preview while recording is running")
+
+        self.recording.stop()
+        self.camera_recorder.stop()
+
+        self.state = self.RecordingState.Idle
+        self.recording = None
+
+    def stop_recording(self):
+        if self.state == self.RecordingState.Idle:
+            return
+
+        if self.state == self.RecordingState.Preview:
+            raise ValueError("Cannot stop recording while preview is running")
+
+        # TODO: Can we assume that the recording is not None? Depends on how well we manage the state
+        self.camera_recorder.stop()
+        self.camera_recorder.wait()
+        self.recording.stop()
+        self.recording_timer.deleteLater()
+
+        self.state = self.RecordingState.Idle
+        self.recording = None
+
+        self.recording_stopped_signal.emit()
+
+    def stop(self):
+        if self.state == self.RecordingState.Idle:
+            return
+
+        if self.state == self.RecordingState.Preview:
+            self.stop_preview()
+        else:
+            self.stop_recording()
+
+    def close(self):
+        # TODO: probably more things
+        self.stop()
+        self.deleteLater()
 
 
 class RecordingManager(QObject):
