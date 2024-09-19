@@ -17,6 +17,7 @@ pyinstaller^
  --add-data "res/logo.png;./res"^
  --add-data "res/logo.ico;./res"^
  --add-data "res/splashscreen.png;./res"^
+ --add-data "res/grimace_box_splash_proper.png;./res"^
  --add-data "res/grimace_legend.drawio.png;./res"^
  --onedir^
  --noconsole^
