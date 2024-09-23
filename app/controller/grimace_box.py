@@ -36,7 +36,7 @@ from app.recording.recording_manager import RecordingManager2
 from app.validation.config.camera_config_validator import CameraConfigValidator
 from app.validation.config.grimace_config_validator import GrimaceConfigValidator
 from app.validation.config.recording_config_validator import RecordingConfigValidator
-from app.validation.config.video_files_validator import VideoFilesValidator
+from app.validation.config.video_files_validator import VideoFilesConfigValidator
 from app.dataflow.qvariable import QVariable
 
 logger = logging.getLogger("grimace_recorder.app.controller.grimace_box")
@@ -732,7 +732,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         progress.setValue(40)
 
-        error = VideoFilesValidator.validate(video_files_config)
+        error = VideoFilesConfigValidator.validate(video_files_config)
         if error is not None:
             logger.warning("Error loading files config: %s %s", error, video_files_config)
             dlg = QMessageBox(self)

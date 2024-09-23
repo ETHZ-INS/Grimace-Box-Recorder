@@ -177,6 +177,7 @@ class Ui_WGrimaceBox(object):
         self.verticalLayout_4 = QVBoxLayout(self.frame_6)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalLayout_4.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.lbl_warnings = QLabel(self.frame_6)
         self.lbl_warnings.setObjectName(u"lbl_warnings")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)

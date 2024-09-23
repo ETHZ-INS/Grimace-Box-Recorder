@@ -24,8 +24,6 @@ class ConfigurePoseEstimation(Ui_DConfigurePoseTracking, QDialog):
 
         debug_mode = model.debug_mode
 
-        self.chb_enable_pose.setChecked(self.temp_config.enabled)
-
         pose_models = self.temp_config.POSE_TOP_MODELS
         if not debug_mode:
             pose_models = [model for model in pose_models if model != "Demo (Fake Mouse)"]
@@ -46,7 +44,6 @@ class ConfigurePoseEstimation(Ui_DConfigurePoseTracking, QDialog):
 
         self.chb_show_pose_preview.setChecked(self.temp_config.show_preview)
 
-        self.chb_enable_pose.stateChanged.connect(self.enable_pose_changed)
         self.chb_show_pose_preview.stateChanged.connect(self.show_pose_preview_changed)
 
         self.dpd_pose_model.currentIndexChanged.connect(self.pose_model_changed)
@@ -55,17 +52,6 @@ class ConfigurePoseEstimation(Ui_DConfigurePoseTracking, QDialog):
 
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
-
-        self.enable_pose_changed()
-
-    @Trace.trace(logger)
-    def enable_pose_changed(self, *_):
-        pose_enabled = self.chb_enable_pose.isChecked()
-        self.temp_config.enabled = pose_enabled
-        logger.info("Pose Tracking Enabled: %s", pose_enabled)
-
-        self.dpd_pose_model.setEnabled(self.temp_config.enabled)
-        self.chb_show_pose_preview.setEnabled(self.temp_config.enabled)
 
     @Trace.trace(logger)
     def show_pose_preview_changed(self, *_):

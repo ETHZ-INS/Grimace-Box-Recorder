@@ -27,6 +27,7 @@ class OverviewRenderer:
         self.model.pose_config_signal.connect(self.render)
         self.model.recording_number_signal.connect(self.render)
         self.model.recording_name_signal.connect(self.render)
+        self.model.ask_for_identifier_signal.connect(self.render)
         self.render()
 
     def render(self):
@@ -47,9 +48,10 @@ class OverviewRenderer:
             recording_duration = "error"
 
         if self.model.recording_name is None:
-            recording_name = "<span style='color:gray'><i>Will be asked at the start of the recording</i></span>"
-        elif self.model.recording_name == "":
-            recording_name = "<span style='color:gray'><i>None</i></span>"
+            if self.model.ask_for_identifier and self.model.recording_state in ["ready", "not_ready"]:
+                recording_name = "<span style='color:gray'><i>Will be asked at the start of the recording</i></span>"
+            else:
+                recording_name = "<span style='color:gray'><i>None</i></span>"
         else:
             recording_name = self.model.recording_name
 

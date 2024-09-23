@@ -9,9 +9,6 @@ class GrimaceConfigValidator:
         if grimace_config is None:
             return "Config is null"
 
-        if grimace_config.enabled is None:
-            return "Grimace enabled is null"
-
         if grimace_config.grimace_model is None:
             return "Grimace model is null"
 

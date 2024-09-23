@@ -4,7 +4,6 @@ from typing import Optional
 
 @dataclass
 class PoseTopConfig:
-    enabled: bool = False
     show_preview: bool = False
     pose_model: Optional[str] = "V1 - GrimaceBoxTop"
     pose_device: str = "cpu"

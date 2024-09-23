@@ -1,6 +1,6 @@
 import time
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QThread
 
 from app.model.grimace_recorder_model import GrimaceRecorderModel
 
@@ -18,6 +18,10 @@ class RecordingManager(QObject):
         self.model.recording_config_signal.connect(self.on_config_changed)
         self.model.grimace_config_signal.connect(self.on_config_changed)
         self.model.pose_config_signal.connect(self.on_config_changed)
+
+        self.thread = QThread()
+        self.moveToThread(self.thread)
+        self.thread.start()
 
     def on_recording_state_changed(self, recording_state: str):
         if recording_state == "starting":

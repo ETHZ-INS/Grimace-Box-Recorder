@@ -39,6 +39,7 @@ class ConfigureRecordingName(Ui_DRecordingName, QDialog):
     @Trace.trace(logger)
     def recording_name_changed(self, *_):
         recording_name = self.txt_recording_name.text()
+        recording_name = None if recording_name == "" else recording_name
         recording_number = self.model.recording_number
 
         prefix = "" if recording_name is None or recording_name == "" else recording_name + "_"
@@ -49,5 +50,6 @@ class ConfigureRecordingName(Ui_DRecordingName, QDialog):
     @Trace.trace(logger)
     def accept(self):
         recording_name = self.txt_recording_name.text()
+        recording_name = None if recording_name == "" else recording_name
         self.model.set_recording_name(recording_name)
         super().accept()

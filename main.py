@@ -11,7 +11,7 @@ from app.model.grimace_recorder_model import GrimaceRecorderModel
 # Show splashscreen before the big module imports to show the user that something's happening
 bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
 res_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'res')))
-splashscreen_image_file = res_folder / "grimace_box_splash_proper.png"
+splashscreen_image_file = res_folder / "splashscreen.png"
 app_icon_file = res_folder / "logo.png"
 
 app = QApplication(sys.argv)

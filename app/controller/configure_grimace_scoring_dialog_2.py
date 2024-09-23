@@ -24,8 +24,6 @@ class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):
 
         debug_mode = model.debug_mode
 
-        self.chb_enable_grimace.setChecked(self.temp_config.enabled)
-
         grimace_models = self.temp_config.GRIMACE_MODELS
         if not debug_mode:
             grimace_models = [model for model in grimace_models if model != "Demo (Fake Mouse)"]
@@ -67,7 +65,6 @@ class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):
         current_index = self.dpd_grimace_scoring_device.findData(self.temp_config.grimace_scoring_device)
         self.dpd_grimace_scoring_device.setCurrentIndex(current_index)
 
-        self.chb_enable_grimace.stateChanged.connect(self.enable_grimace_changed)
         self.dpd_grimace_model.currentTextChanged.connect(self.grimace_model_changed)
         self.dpd_frame_interval.currentTextChanged.connect(self.frame_interval_changed)
 
@@ -77,20 +74,6 @@ class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):
 
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
-
-        self.enable_grimace_changed()
-
-    @Trace.trace(logger)
-    def enable_grimace_changed(self, *_):
-        grimace_enabled = self.chb_enable_grimace.isChecked()
-        self.temp_config.enabled = grimace_enabled
-        logger.info("Grimace Analysis Enabled: %s", grimace_enabled)
-
-        self.dpd_grimace_model.setEnabled(self.temp_config.enabled)
-        self.dpd_frame_interval.setEnabled(self.temp_config.enabled)
-        self.dpd_frame_quality_device.setEnabled(self.temp_config.enabled)
-        self.dpd_face_cropper_device.setEnabled(self.temp_config.enabled)
-        self.dpd_grimace_scoring_device.setEnabled(self.temp_config.enabled)
 
     @Trace.trace(logger)
     def grimace_model_changed(self, *_):

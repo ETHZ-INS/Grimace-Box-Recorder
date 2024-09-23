@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QDialogButtonBox, QMessageBo
 
 from app.layout.configure_video_files_dialog import Ui_DConfigureVideoFiles
 from app.model.grimace_recorder_model import GrimaceRecorderModel
-from app.validation.config.video_files_validator import VideoFilesValidator
+from app.validation.config.video_files_validator import VideoFilesConfigValidator
 
 import logging
 
@@ -36,7 +36,7 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
 
     @Trace.trace(logger)
     def apply(self):
-        error = VideoFilesValidator.validate(self.temp_config)
+        error = VideoFilesConfigValidator.validate(self.temp_config)
 
         if error is not None:
             dlg = QMessageBox(self)

@@ -17,6 +17,7 @@ class GrimaceRecorderModel(QObject):
     Signals are used to notify the UI of changes made to the data.
     """
     debug_mode_signal = Signal(bool)
+    ask_for_identifier_signal = Signal(bool)
 
     top_camera_config_signal = Signal(CameraConfig)
     front_camera_config_signal = Signal(CameraConfig)
@@ -44,6 +45,10 @@ class GrimaceRecorderModel(QObject):
     overview_text_signal = Signal(str)
     warnings_text_signal = Signal(str)
 
+    message_box_signal = Signal(str, object, object)
+    progress_dialog_signal = Signal(str, object, object, int)
+    progress_dialog_progress_signal = Signal(str, int)
+
     def __init__(self):
         super(GrimaceRecorderModel, self).__init__()
 
@@ -56,12 +61,16 @@ class GrimaceRecorderModel(QObject):
         self.grimace_config = GrimaceConfig()
         self.pose_config = PoseTopConfig()
 
+        self.config_file = None
+
         self.recording_state: Literal["ready", "not_ready", "starting", "recording", "stopping"] = "not_ready"
         self.recording_state_reason = "Not ready to record."
         self.recording_error = None
 
         self.recording_number = 1
         self.recording_name = None
+
+        self.ask_for_identifier = True
 
         self.auto_stop = False
         self.recording_timer_time = 0.0
@@ -75,9 +84,25 @@ class GrimaceRecorderModel(QObject):
         self.overview_text = None
         self.warnings_text = None
 
+        self.message_box_state = "hidden"
+        self.message_box_title = None
+        self.message_box_text = None
+
+        self.progress_dialog_state = "finished"
+        self.progress_dialog_title = None
+        self.progress_dialog_text = None
+        self.progress_dialog_progress = None
+
     def set_debug_mode(self, debug_mode: bool):
         self.debug_mode = debug_mode
         self.debug_mode_signal.emit(debug_mode)
+
+    def set_config_file(self, config_file: str):
+        self.config_file = config_file
+
+    def set_ask_for_identifier(self, ask_for_identifier: bool):
+        self.ask_for_identifier = ask_for_identifier
+        self.ask_for_identifier_signal.emit(ask_for_identifier)
 
     def set_auto_stop(self, auto_stop: bool):
         self.auto_stop = auto_stop
@@ -139,6 +164,11 @@ class GrimaceRecorderModel(QObject):
         self.recording_state_reason = None
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    def set_loading(self):
+        self.recording_state = "loading"
+        self.recording_state_reason = None
+        self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
+
     def set_recording_number(self, recording_number: int):
         self.recording_number = recording_number
         self.recording_number_signal.emit(recording_number)
@@ -178,3 +208,34 @@ class GrimaceRecorderModel(QObject):
     def set_warnings_text(self, warnings_text: str):
         self.warnings_text = warnings_text
         self.warnings_text_signal.emit(warnings_text)
+
+    def set_message_box(self, title: str, text: str):
+        self.message_box_state = "visible"
+        self.message_box_title = title
+        self.message_box_text = text
+        self.message_box_signal.emit("visible", title, text)
+
+    def close_message_box(self):
+        self.message_box_state = "hidden"
+        self.message_box_title = None
+        self.message_box_text = None
+        self.message_box_signal.emit("hidden", None, None)
+
+    def set_progress_dialog(self, title: str, text: str, progress: int = 0):
+        self.progress_dialog_state = "running"
+        self.progress_dialog_title = title
+        self.progress_dialog_text = text
+        self.progress_dialog_progress = progress
+        self.progress_dialog_signal.emit("running", title, text, progress)
+
+    def finish_progress_dialog(self):
+        self.progress_dialog_state = "finished"
+        self.progress_dialog_title = None
+        self.progress_dialog_text = None
+        self.progress_dialog_progress = None
+        self.progress_dialog_signal.emit("finished", None, None, None)
+
+    def set_progress_dialog_progress(self, text: str, progress: int):
+        self.progress_dialog_text = text
+        self.progress_dialog_progress = progress
+        self.progress_dialog_progress_signal.emit(text, progress)
