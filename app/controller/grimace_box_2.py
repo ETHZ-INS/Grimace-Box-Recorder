@@ -413,6 +413,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             if self.progress_dialog is None:
                 self.progress_dialog = QProgressDialog(text, "", 0, 100, self)
                 self.progress_dialog.setWindowTitle(title)
+                # noinspection PyTypeChecker
                 self.progress_dialog.setCancelButton(None)
                 # Disable the close button so the user can't close it manually
                 # to ensure that the UI stays frozen until the progress dialog is finished

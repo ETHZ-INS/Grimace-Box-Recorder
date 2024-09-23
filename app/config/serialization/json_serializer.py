@@ -32,12 +32,7 @@ class ConfigV1Parser:
     @classmethod
     def parse_video_files_config(cls, json_config: dict) -> VideoFilesConfig:
         return VideoFilesConfig(
-            target_directory=json_config["target_directory"],
-            naming_mode=json_config["naming_mode"],
-            top_templates=json_config["top_templates"],
-            front_templates=json_config["front_templates"],
-            grimace_results_templates=json_config["grimace_results_template"],
-            pose_results_templates=json_config["pose_results_template"]
+            target_directory=json_config["target_directory"]
         )
 
     @classmethod
@@ -92,12 +87,7 @@ class ConfigSerializer:
     @classmethod
     def serialize_video_files_config(cls, video_files_config: VideoFilesConfig) -> dict:
         return {
-            "target_directory": video_files_config.target_directory,
-            "naming_mode": video_files_config.naming_mode,
-            "top_templates": video_files_config.top_templates,
-            "front_templates": video_files_config.front_templates,
-            "grimace_results_template": video_files_config.grimace_results_templates,
-            "pose_results_template": video_files_config.pose_results_templates,
+            "target_directory": video_files_config.target_directory
         }
 
     @classmethod
