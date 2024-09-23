@@ -48,7 +48,7 @@ sys.excepthook = uncaught_exception_handler
 
 logger.info("Starting Grimace Recorder")
 
-from app.controller.grimace_box_2 import MainWindow
+from app.controller.grimace_box import MainWindow
 
 os.environ["YOLO_VERBOSE"] = "false"
 os.environ["PYLON_CAMEMU"] = "2"

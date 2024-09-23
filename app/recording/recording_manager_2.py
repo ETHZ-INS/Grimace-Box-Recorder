@@ -19,9 +19,14 @@ class RecordingManager(QObject):
         self.model.grimace_config_signal.connect(self.on_config_changed)
         self.model.pose_config_signal.connect(self.on_config_changed)
 
+        self.model.video_files_config_signal.connect(self.on_video_files_config_changed)
+
         self.thread = QThread()
         self.moveToThread(self.thread)
         self.thread.start()
+
+    def on_video_files_config_changed(self):
+        self.model.set_recording_number(self.model.recording_number + 1)
 
     def on_recording_state_changed(self, recording_state: str):
         if recording_state == "starting":

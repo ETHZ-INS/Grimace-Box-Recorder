@@ -5,6 +5,7 @@ from app.model.grimace_recorder_model import GrimaceRecorderModel
 
 OVERVIEW_TEMPLATE = """
 ## Overview for {recording_state}:  
+Target Directory:\t{target_directory}  
 Recording Number:\t{recording_number}  
 Recording Identifier:\t{recording_name}  
 Recording Duration:\t{recording_duration}  
@@ -23,6 +24,7 @@ class OverviewRenderer:
         self.model = model
         self.model.recording_state_signal.connect(self.render)
         self.model.recording_config_signal.connect(self.render)
+        self.model.video_files_config_signal.connect(self.render)
         self.model.grimace_config_signal.connect(self.render)
         self.model.pose_config_signal.connect(self.render)
         self.model.recording_number_signal.connect(self.render)
@@ -35,6 +37,11 @@ class OverviewRenderer:
             recording_state = "Current Recording"
         else:
             recording_state = "Next Recording"
+
+        if self.model.video_files_config.target_directory is None:
+            target_directory = "<span style='color:red'><i>Not Set</i></span>"
+        else:
+            target_directory = self.model.video_files_config.target_directory
 
         if self.model.recording_config.mode == "Manual":
             recording_duration = "Manual"
@@ -68,6 +75,7 @@ class OverviewRenderer:
         pose_preview = "Enabled" if self.model.pose_config.show_preview else "Disabled"
 
         overview = OVERVIEW_TEMPLATE.format(
+            target_directory=target_directory,
             recording_state=recording_state,
             recording_number=self.model.recording_number,
             recording_name=recording_name,

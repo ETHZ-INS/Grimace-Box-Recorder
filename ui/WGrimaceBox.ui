@@ -603,7 +603,7 @@ font: 700 16pt &quot;Segoe UI&quot;;</string>
     </widget>
     <addaction name="menu_configure_cameras"/>
     <addaction name="action_configure_recording"/>
-    <addaction name="action_configure_video_files"/>
+    <addaction name="action_change_target_directory"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -664,12 +664,12 @@ font: 700 16pt &quot;Segoe UI&quot;;</string>
     <string/>
    </property>
   </action>
-  <action name="action_configure_video_files">
+  <action name="action_change_target_directory">
    <property name="text">
-    <string>Configure Files</string>
+    <string>Change Target Directory</string>
    </property>
    <property name="iconText">
-    <string>Configure Files</string>
+    <string>Change Target Directory</string>
    </property>
    <property name="toolTip">
     <string>Change where the recorded videos and results of the grimace analysis are saved</string>
