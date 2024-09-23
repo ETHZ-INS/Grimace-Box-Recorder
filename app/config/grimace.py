@@ -18,4 +18,3 @@ class GrimaceConfig:
         ("30 Seconds", 30.0),
         ("1 Minute", 60.0),
     ]
-    FIXED_DEVICE = True

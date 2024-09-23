@@ -9,4 +9,3 @@ class PoseTopConfig:
     pose_device: str = "cuda:0"
 
     POSE_TOP_MODELS = ["V1 - GrimaceBoxTop", "Demo (Fake Mouse)"]
-    FIXED_DEVICE = True

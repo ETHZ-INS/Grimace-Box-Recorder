@@ -39,6 +39,9 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
         else:
             self.dpd_codec.setCurrentIndex(-1)
 
+        if not self.model.debug_mode:
+            self.dpd_codec.setEnabled(False)
+
         recording_duration_ms = int(self.temp_config.duration * 1000)
         self.tme_time.setTime(QTime(0, 0).addMSecs(recording_duration_ms))
 
@@ -48,9 +51,6 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
 
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
-
-        if self.temp_config.FIXED_CODEC:
-            self.dpd_codec.setEnabled(False)
 
         self.recording_mode_changed()
 

@@ -7,7 +7,7 @@ from typing import Tuple
 
 import numpy as np
 from PySide6 import QtCore
-from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtGui import QPixmap, QImage, QShortcut, QKeySequence
 from numpy import ndarray
 
 from app.config.serialization.config_loader import ConfigLoader
@@ -83,6 +83,10 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.btn_record.clicked.connect(self.btn_record_clicked)
         self.chb_identifier.stateChanged.connect(self.chb_identifier_state_changed)
 
+        self.demo_shortcut = QShortcut(self)
+        self.demo_shortcut.setKey(QKeySequence("CTRL+D"))
+        self.demo_shortcut.activated.connect(self.enable_debug_mode)
+
         self.overview_renderer = OverviewRenderer(self.model)
         self.recording_manager = RecordingManager(self.model)
         self.config_loader = ConfigLoader(self.model)
@@ -106,6 +110,9 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     def on_debug_mode(self, debug_mode: bool):
         self.lbl_debug_mode.setVisible(debug_mode)
+
+    def enable_debug_mode(self):
+        self.model.set_debug_mode(True)
 
     def chb_identifier_state_changed(self, ask_identifier: bool):
         self.model.set_ask_for_identifier(ask_identifier)
