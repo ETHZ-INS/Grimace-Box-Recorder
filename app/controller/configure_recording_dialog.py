@@ -49,6 +49,9 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
 
+        if self.temp_config.FIXED_CODEC:
+            self.dpd_codec.setEnabled(False)
+
         self.recording_mode_changed()
 
     @Trace.trace(logger)

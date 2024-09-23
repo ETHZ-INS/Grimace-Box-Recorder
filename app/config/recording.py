@@ -10,3 +10,4 @@ class RecordingConfig:
 
     MODES = ["Manual", "Timed"]
     CODECS = ["FMP4", "FFV1", "H264"]
+    FIXED_CODEC = True
