@@ -349,11 +349,11 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.start_recording()
 
     def _select_save_file(self):
-        if self.config_file is None:
+        if self.model.config_file is None:
             # Default path when opening the file dialog
             selected_file = str(Path.home() / "project.gb")
         else:
-            selected_file = self.config_file
+            selected_file = self.model.config_file
 
         file_filter = "Grimace Box Project Files (*.gb)"
         selected_file, _ = QFileDialog.getSaveFileName(self, "Save Project", selected_file, file_filter)
