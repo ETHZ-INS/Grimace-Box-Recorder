@@ -6,9 +6,9 @@ from typing import Optional
 class GrimaceConfig:
     grimace_model: Optional[str] = "V1 - HohlBot"
     frame_interval: float = 10.0
-    frame_quality_device: str = "cpu"
-    face_cropper_device: str = "cpu"
-    grimace_scoring_device: str = "cpu"
+    frame_quality_device: str = "cuda:0"
+    face_cropper_device: str = "cuda:0"
+    grimace_scoring_device: str = "cuda:0"
 
     GRIMACE_MODELS = ["V1 - HohlBot", "Demo (Fake Mouse)"]
     FRAME_INTERVAL_OPTIONS = [
@@ -18,3 +18,4 @@ class GrimaceConfig:
         ("30 Seconds", 30.0),
         ("1 Minute", 60.0),
     ]
+    FIXED_DEVICE = True

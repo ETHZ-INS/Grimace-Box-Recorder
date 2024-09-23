@@ -13,6 +13,9 @@ from util.trace import Trace
 logger = logging.getLogger("grimace_recorder.app.analysis.configure_grimace_scoring_dialog")
 
 
+DEFAULT_DEVICE = "cuda:0"
+
+
 class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):
     @Trace.trace(logger)
     def __init__(self, parent, model: GrimaceRecorderModel):
@@ -74,6 +77,11 @@ class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):
 
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
+
+        if self.temp_config.FIXED_DEVICE:
+            self.dpd_frame_quality_device.setEnabled(False)
+            self.dpd_face_cropper_device.setEnabled(False)
+            self.dpd_grimace_scoring_device.setEnabled(False)
 
     @Trace.trace(logger)
     def grimace_model_changed(self, *_):
