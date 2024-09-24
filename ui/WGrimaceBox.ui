@@ -7,8 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>1235</width>
-    <height>803</height>
+    <height>774</height>
    </rect>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
    <string>GrimAce</string>
@@ -267,7 +270,7 @@
        <item>
         <widget class="QLabel" name="lbl_overview">
          <property name="text">
-          <string>### Overview for next recording:  
+          <string>## Overview for next recording:  
 Recording Number: 1  
 Recording Duration: 00:10:00.000  
 Top Camera Frame Rate: 30.0 FPS  
@@ -299,6 +302,18 @@ Front Video Filename: front_1.avi
           <property name="sizeConstraint">
            <enum>QLayout::SetDefaultConstraint</enum>
           </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
           <item>
            <widget class="QLabel" name="lbl_warnings">
             <property name="sizePolicy">
@@ -308,13 +323,13 @@ Front Video Filename: front_1.avi
              </sizepolicy>
             </property>
             <property name="styleSheet">
-             <string notr="true"/>
+             <string notr="true">color: orange</string>
             </property>
             <property name="frameShadow">
              <enum>QFrame::Plain</enum>
             </property>
             <property name="text">
-             <string/>
+             <string>## Warnings</string>
             </property>
             <property name="textFormat">
              <enum>Qt::MarkdownText</enum>
@@ -398,26 +413,91 @@ font: 700 16pt &quot;Segoe UI&quot;;</string>
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <property name="topMargin">
+        <number>9</number>
+       </property>
+       <property name="rightMargin">
+        <number>9</number>
+       </property>
        <item>
-        <widget class="QPushButton" name="btn_record">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
+        <widget class="QFrame" name="frame_7">
          <property name="minimumSize">
           <size>
-           <width>100</width>
+           <width>250</width>
            <height>0</height>
           </size>
          </property>
-         <property name="toolTip">
-          <string/>
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
          </property>
-         <property name="text">
-          <string>Start Recording</string>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
          </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="btn_record">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="text">
+             <string>Start Recording</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="chb_identifier">
+            <property name="text">
+             <string>Ask for Identifier</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
@@ -446,8 +526,14 @@ font: 700 16pt &quot;Segoe UI&quot;;</string>
          </property>
          <property name="minimumSize">
           <size>
-           <width>100</width>
+           <width>250</width>
            <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
           </size>
          </property>
          <property name="text">
@@ -517,7 +603,7 @@ font: 700 16pt &quot;Segoe UI&quot;;</string>
     </widget>
     <addaction name="menu_configure_cameras"/>
     <addaction name="action_configure_recording"/>
-    <addaction name="action_configure_video_files"/>
+    <addaction name="action_change_target_directory"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -578,12 +664,12 @@ font: 700 16pt &quot;Segoe UI&quot;;</string>
     <string/>
    </property>
   </action>
-  <action name="action_configure_video_files">
+  <action name="action_change_target_directory">
    <property name="text">
-    <string>Configure Files</string>
+    <string>Change Target Directory</string>
    </property>
    <property name="iconText">
-    <string>Configure Files</string>
+    <string>Change Target Directory</string>
    </property>
    <property name="toolTip">
     <string>Change where the recorded videos and results of the grimace analysis are saved</string>

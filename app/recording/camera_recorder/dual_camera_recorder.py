@@ -143,14 +143,14 @@ class DualCameraRecorder(QThread):
         self.running = False
 
     @Trace.trace(logger)
-    def set_top_camera(self, source: CameraSource | None, start: bool = True):
+    def set_top_camera(self, source: CameraSource | None):
         if self.running:
             raise Exception("Cannot change camera source while recorder is running")
-            #self.stop()
-            #self.wait()
 
         # TODO: Now that i open the camera before setting the source, there's an error if i try to use the same camera
         #  Temp solution is to first set the source to None, then set the new source
+        #  Maybe make a close method that closes the camera and sets the source to None
+        #  so the caller has the responsibility to close the camera before setting a new source
         if self.top_camera is not None:
             self.top_camera.close()
             self.top_camera = None
@@ -158,15 +158,10 @@ class DualCameraRecorder(QThread):
         if source is not None:
             self.top_camera = DualCameraRecorder.Camera(source)
 
-        #if start:
-        #    self.start()
-
     @Trace.trace(logger)
-    def set_front_camera(self, source: CameraSource | None, start: bool = True):
+    def set_front_camera(self, source: CameraSource | None):
         if self.running:
             raise Exception("Cannot change camera source while recorder is running")
-            #self.stop()
-            #self.wait()
 
         if self.front_camera is not None:
             self.front_camera.close()
@@ -175,11 +170,8 @@ class DualCameraRecorder(QThread):
         if source is not None:
             self.front_camera = DualCameraRecorder.Camera(source)
 
-        #if start:
-        #    self.start()
-
     @Trace.trace(logger)
-    def set_recording_context(self, recording_context: RecordingContext):
+    def set_recording_context(self, recording_context: RecordingContext | None):
         self.recording_context = recording_context
 
     def handle_frame(self, camera: Camera, frame: np.ndarray, timestamp: float):

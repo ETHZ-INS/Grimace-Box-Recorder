@@ -6,6 +6,8 @@ from PySide6 import QtGui
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
+from app.model.grimace_recorder_model import GrimaceRecorderModel
+
 # Show splashscreen before the big module imports to show the user that something's happening
 bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
 res_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'res')))
@@ -48,7 +50,12 @@ logger.info("Starting Grimace Recorder")
 
 from app.controller.grimace_box import MainWindow
 
-window = MainWindow()
+os.environ["YOLO_VERBOSE"] = "false"
+os.environ["PYLON_CAMEMU"] = "2"
+
+model = GrimaceRecorderModel()
+
+window = MainWindow(model)
 window.setWindowIcon(QtGui.QIcon(str(app_icon_file)))
 window.show()
 if splash is not None:
