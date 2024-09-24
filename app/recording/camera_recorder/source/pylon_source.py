@@ -1,4 +1,5 @@
 import logging
+import time
 
 import numpy as np
 from pypylon import pylon
@@ -51,8 +52,8 @@ class PylonCameraSource(CameraSource):
 
         timestamp = grab_result.GetTimeStamp()
         if timestamp == 0:
-            # The emulated pylon cameras return 0 for timestamp
-            timestamp = None
+            # The emulated pylon cameras (for test purposes only) return 0 for timestamp
+            timestamp = time.time()
         else:
             timestamp = timestamp / 125000000
 

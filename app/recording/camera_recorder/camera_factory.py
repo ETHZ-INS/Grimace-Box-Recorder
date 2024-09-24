@@ -9,6 +9,9 @@ from app.recording.camera_recorder.source.pylon_source import PylonCameraSource
 class CameraFactory:
     @staticmethod
     def create_pylon_camera(config: CameraConfig) -> CameraSource | None:
+        if config.camera_id is None:
+            return None
+
         tlf = pylon.TlFactory.GetInstance()
         devices = tlf.EnumerateDevices()
         devices = [device for device in devices if device.GetSerialNumber() == config.camera_id]
@@ -51,7 +54,7 @@ class CameraFactory:
         None if the camera config is valid but incomplete
         :raises: ValueError if the camera config is invalid
         """
-
+        print(config)
         if config.camera_type == "Pylon":
             return CameraFactory.create_pylon_camera(config)
         elif config.camera_type == "Video File":

@@ -27,6 +27,7 @@ class VideoPipeline(QObject, IProcess, metaclass=VideoPipelineMeta):
             process.on_error(self.analysis_error_signal.emit)
 
     def start(self):
+        print("Starting video pipeline")
         for process in self.core_processes + self.analysis_processes:
             process.start()
 

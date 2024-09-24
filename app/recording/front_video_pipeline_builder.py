@@ -1,7 +1,5 @@
 from pathlib import Path
-from typing import Literal, Optional
-
-import cv2
+from typing import Optional
 
 from app.analysis.grimace_analyzer_v1 import GrimaceAnalyzerV1
 from app.analysis.grimace_results_writer import GrimaceResultWriter
@@ -17,8 +15,6 @@ from grimace.grimace_scorer import GrimaceScorer
 
 class FrontVideoPipelineBuilder:
     def __init__(self):
-        self.grimace_enabled = False
-
         self.preview_queue: IQueue | None = None
         self.results_preview_queue: IQueue | None = None
 
@@ -31,10 +27,6 @@ class FrontVideoPipelineBuilder:
         self.frames_per_interval: int | None = None
 
         self.grimace_results_file: Path | None = None
-
-    def set_grimace_enabled(self, grimace_enabled: bool) -> 'FrontVideoPipelineBuilder':
-        self.grimace_enabled = grimace_enabled
-        return self
 
     def set_preview_queue(self, preview_queue: IQueue) -> 'FrontVideoPipelineBuilder':
         self.preview_queue = preview_queue
@@ -107,18 +99,15 @@ class FrontVideoPipelineBuilder:
 
         core_services.append(self.video_writer)
 
-        if self.grimace_enabled:
-            grimace_results_writer = self.build_grimace_results_writer()
-            analysis_services.append(grimace_results_writer)
+        grimace_results_writer = self.build_grimace_results_writer()
+        analysis_services.append(grimace_results_writer)
 
-            grimace_output_queue = QueueForker([grimace_results_writer.queue])
+        grimace_output_queue = QueueForker([grimace_results_writer.queue])
 
-            grimace_scorer_service = self.build_grimace_analyzer_service(grimace_output_queue)
-            analysis_services.append(grimace_scorer_service)
+        grimace_scorer_service = self.build_grimace_analyzer_service(grimace_output_queue)
+        analysis_services.append(grimace_scorer_service)
 
-            camera_queue = QueueForker([self.video_writer.queue, grimace_scorer_service.queue, preview_queue])
-        else:
-            camera_queue = QueueForker([self.video_writer.queue, preview_queue])
+        camera_queue = QueueForker([self.video_writer.queue, grimace_scorer_service.queue, preview_queue])
 
         return VideoPipeline(core_services, analysis_services, camera_queue)
 
@@ -131,14 +120,13 @@ class FrontVideoPipelineBuilder:
 
         # Same for frames_per_interval
 
-        if self.grimace_enabled:
-            if self.frame_quality_scorer is None:
-                return "frame_quality_scorer is not set"
-            if self.face_cropper is None:
-                return "face_cropper is not set"
-            if self.grimace_scorer is None:
-                return "grimace_scorer is not set"
-            if self.grimace_results_file is None:
-                return "grimace_results_file is not set"
+        if self.frame_quality_scorer is None:
+            return "frame_quality_scorer is not set"
+        if self.face_cropper is None:
+            return "face_cropper is not set"
+        if self.grimace_scorer is None:
+            return "grimace_scorer is not set"
+        if self.grimace_results_file is None:
+            return "grimace_results_file is not set"
 
         return None

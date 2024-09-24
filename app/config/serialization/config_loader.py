@@ -1,5 +1,4 @@
 import logging
-import time
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread
@@ -96,17 +95,24 @@ class ConfigLoader(QObject):
 
         self.model.set_top_camera_config(top_camera_config)
         self.model.set_front_camera_config(front_camera_config)
-        time.sleep(2)
         self.model.set_progress_dialog_progress("Applying Configuration...", 40)
         self.model.set_recording_config(recording_config)
-        time.sleep(1)
         self.model.set_progress_dialog_progress("Applying Configuration...", 50)
         self.model.set_video_files_config(video_files_config)
-        time.sleep(1)
         self.model.set_progress_dialog_progress("Applying Configuration...", 60)
         self.model.set_grimace_config(grimace_config)
-        time.sleep(2)
         self.model.set_progress_dialog_progress("Applying Configuration...", 80)
         self.model.set_pose_config(pose_top_config)
-        time.sleep(2)
         self.model.finish_progress_dialog()
+
+    def save(self, path: Path):
+        config = (
+            self.model.top_camera_config,
+            self.model.front_camera_config,
+            self.model.recording_config,
+            self.model.video_files_config,
+            self.model.grimace_config,
+            self.model.pose_config
+        )
+
+        JsonConfigSerializer.save(path, config)

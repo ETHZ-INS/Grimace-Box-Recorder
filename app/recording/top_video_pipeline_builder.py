@@ -1,12 +1,10 @@
 from pathlib import Path
-from typing import List, Literal, Optional
-
-import cv2
+from typing import List, Optional
 
 from app.analysis.PoseRenderer import PoseRenderer
 from app.analysis.pose_tracking_results_writer import PoseEstimationResultWriter
 from app.analysis.top_pose_estimator_v1 import TopPoseEstimatorV1
-from app.dataflow.qqueue import IQueue, QQueue
+from app.dataflow.qqueue import IQueue
 from app.dataflow.queue_forker import QueueForker
 from app.dataflow.queue_pacer import QueuePacer
 from app.recording.FPSRenderer import FPSRenderer
@@ -17,7 +15,6 @@ from grimace.pose_model import PoseModel
 
 class TopVideoPipelineBuilder:
     def __init__(self):
-        self.pose_enabled = False
         self.pose_preview_enabled = False
 
         self.preview_queue: IQueue | None = None
@@ -29,10 +26,6 @@ class TopVideoPipelineBuilder:
         self.top_pose_keypoints: List[str] | None = None
 
         self.target_frame_rate: float | None = None
-
-    def set_pose_enabled(self, pose_enabled: bool) -> 'TopVideoPipelineBuilder':
-        self.pose_enabled = pose_enabled
-        return self
 
     def set_pose_preview_enabled(self, pose_preview_enabled: bool) -> 'TopVideoPipelineBuilder':
         self.pose_preview_enabled = pose_preview_enabled
@@ -87,7 +80,22 @@ class TopVideoPipelineBuilder:
             raise ValueError("preview_queue is not set")
 
         if preview:
-            return VideoPipeline([], [], self.preview_queue)
+            analysis_services = []
+            if self.pose_preview_enabled:
+                preview_queue = PoseRenderer(FPSRenderer(self.preview_queue))
+
+                pacer = self.build_pacer(preview_queue)
+                analysis_services.append(pacer)
+
+                pose_output_queue = QueueForker([pacer.queue])
+                pose_estimator = self.build_pose_estimator(pose_output_queue, batch_size=4)
+                analysis_services.append(pose_estimator)
+
+                camera_queue = pose_estimator.queue
+            else:
+                preview_queue = FPSRenderer(self.preview_queue)
+                camera_queue = preview_queue
+            return VideoPipeline([], analysis_services, camera_queue)
 
         if self.video_writer is None:
             raise ValueError("video_writer is not set")
@@ -97,33 +105,29 @@ class TopVideoPipelineBuilder:
 
         core_services.append(self.video_writer)
 
-        if self.pose_enabled:
-            pose_results_writer = self.build_pose_results_writer()
-            analysis_services.append(pose_results_writer)
+        pose_results_writer = self.build_pose_results_writer()
+        analysis_services.append(pose_results_writer)
 
-            if self.pose_preview_enabled:
-                preview_queue = PoseRenderer(FPSRenderer(self.preview_queue))
+        if self.pose_preview_enabled:
+            preview_queue = PoseRenderer(FPSRenderer(self.preview_queue))
 
-                pacer = self.build_pacer(preview_queue)
-                analysis_services.append(pacer)
+            pacer = self.build_pacer(preview_queue)
+            analysis_services.append(pacer)
 
-                pose_output_queue = QueueForker([pose_results_writer.queue, pacer.queue])
-                pose_estimator = self.build_pose_estimator(pose_output_queue, batch_size=4)
+            pose_output_queue = QueueForker([pose_results_writer.queue, pacer.queue])
+            pose_estimator = self.build_pose_estimator(pose_output_queue, batch_size=4)
 
-                analysis_services.append(pose_estimator)
-                camera_queue = QueueForker([self.video_writer.queue, pose_estimator.queue])
-            else:
-                preview_queue = FPSRenderer(self.preview_queue)
-
-                pose_output_queue = QueueForker([pose_results_writer.queue])
-
-                pose_estimator = self.build_pose_estimator(pose_output_queue, batch_size=4)
-
-                analysis_services.append(pose_estimator)
-                camera_queue = QueueForker([self.video_writer.queue, pose_estimator.queue, preview_queue])
+            analysis_services.append(pose_estimator)
+            camera_queue = QueueForker([self.video_writer.queue, pose_estimator.queue])
         else:
             preview_queue = FPSRenderer(self.preview_queue)
-            camera_queue = QueueForker([self.video_writer.queue, preview_queue])
+
+            pose_output_queue = QueueForker([pose_results_writer.queue])
+
+            pose_estimator = self.build_pose_estimator(pose_output_queue, batch_size=4)
+
+            analysis_services.append(pose_estimator)
+            camera_queue = QueueForker([self.video_writer.queue, pose_estimator.queue, preview_queue])
 
         return VideoPipeline(core_services, analysis_services, camera_queue)
 
@@ -140,12 +144,11 @@ class TopVideoPipelineBuilder:
         #    if self.target_frame_rate is None:
         #        return "Target frame rate not properly configured"
 
-        if self.pose_enabled:
-            if self.pose_estimator_model is None:
-                return "Pose estimator model not properly configured"
-            if self.pose_results_file is None:
-                return "Pose results file not properly configured"
-            if self.top_pose_keypoints is None:
-                return "Top pose keypoints not properly configured"
+        if self.pose_estimator_model is None:
+            return "Pose estimator model not properly configured"
+        if self.pose_results_file is None:
+            return "Pose results file not properly configured"
+        if self.top_pose_keypoints is None:
+            return "Top pose keypoints not properly configured"
 
         return None

@@ -412,7 +412,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
     def save_project(self):
         if self.model.config_file is None:
             self.save_project_as()
-        # TODO: Save the project
+        self.config_loader.save(Path(self.model.config_file))
 
     def save_project_as(self):
         selected_file = self._select_save_file()
