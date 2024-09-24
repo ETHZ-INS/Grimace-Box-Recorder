@@ -61,23 +61,14 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
         else:
             self.dpd_camera.setCurrentIndex(-1)
 
-        if self.temp_config.config_file is not None:
-            self.lbl_selected_config_file.setText(self.temp_config.config_file)
-        else:
-            self.lbl_selected_config_file.setText("No file selected")
-
         if self.temp_config.video_file is not None:
             self.lbl_selected_video_file.setText(self.temp_config.video_file)
         else:
             self.lbl_selected_video_file.setText("No file selected")
 
-        self.spb_fps.setValue(self.temp_config.fps)
-
         self.dpd_camera.currentTextChanged.connect(self.camera_changed)
         self.dpd_camera_type.currentTextChanged.connect(self.camera_type_changed)
-        self.btn_select_config_file.clicked.connect(self.select_config_file)
         self.btn_select_video_file.clicked.connect(self.select_video_file)
-        self.spb_fps.valueChanged.connect(self.fps_changed)
         self.btn_apply = self.btnbox_buttons.button(QDialogButtonBox.StandardButton.Apply)
         self.btn_apply.clicked.connect(self.apply)
 
@@ -101,12 +92,6 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
         self.temp_config.camera_id = camera_id
 
     @Trace.trace(logger)
-    def fps_changed(self, *_):
-        fps = self.spb_fps.value()
-        logger.info("Selected fps: %s", fps)
-        self.temp_config.fps = fps
-
-    @Trace.trace(logger)
     def apply(self):
         if self.camera == "top":
             self.model.set_top_camera_config(self.temp_config)
@@ -118,20 +103,6 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
         if self.temp_config != self.model.top_camera_config if self.camera == "top" else self.model.front_camera_config:
             self.apply()
         super().accept()
-
-    @Trace.trace(logger)
-    def select_config_file(self):
-        dlg = QFileDialog(self)
-        dlg.setFileMode(QFileDialog.FileMode.ExistingFile)
-        dlg.setNameFilter("Pylon Camera Configuration (*.pfs)")
-        if dlg.exec():
-            file = dlg.selectedFiles()[0]
-            logger.info("Selected config file: %s", file)
-            self.lbl_selected_config_file.setText(file)
-            self.temp_config.config_file = file
-        else:
-            self.lbl_selected_config_file.setText("No file selected")
-            self.temp_config.config_file = None
 
     @Trace.trace(logger)
     def select_video_file(self):
