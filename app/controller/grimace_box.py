@@ -71,6 +71,8 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
         self.setStyleSheet(":disabled { color: gray }")
 
+        self.menuHelp.setEnabled(False)
+
         self.debug_mode = False
         self.lbl_debug_mode.setVisible(False)
 

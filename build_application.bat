@@ -2,6 +2,7 @@
 call conda activate GrimaceRecorder
 pyinstaller^
  --add-data "C:\Users\Me\anaconda3\envs\GrimaceRecorder\Lib\site-packages\ultralytics\cfg\default.yaml;./ultralytics/cfg"^
+ --add-data "models/camera_identifier.pt;./models"^
  --add-data "models/frame_quality.pt;./models"^
  --add-data "models/face_cropper.pt;./models"^
  --add-data "models/grimace_scorer.pt;./models"^
@@ -16,6 +17,8 @@ pyinstaller^
  --add-data "res/logo.png;./res"^
  --add-data "res/logo.ico;./res"^
  --add-data "res/splashscreen.png;./res"^
+ --add-data "res/grimace_box_splash_proper.png;./res"^
+ --add-data "res/grimace_legend.drawio.png;./res"^
  --onedir^
  --noconsole^
  --name "Grimace Box"^
