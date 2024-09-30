@@ -42,6 +42,7 @@ class VideoPipeline(QObject, IProcess, metaclass=VideoPipelineMeta):
             process.stop()
 
     def wait(self, timeout: int = None) -> bool:
+        print(self.core_processes, self.analysis_processes)
         stopped = True
         for process in self.core_processes + self.analysis_processes:
             stopped &= process.wait(timeout)

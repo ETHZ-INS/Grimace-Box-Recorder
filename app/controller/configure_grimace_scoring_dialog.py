@@ -20,7 +20,7 @@ class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):
         self.setupUi(self)
 
         self.model = model
-        self.temp_config = deepcopy(model.grimace_config)
+        self.temp_config = deepcopy(model.recording.grimace_config)
 
         debug_mode = model.debug_mode
 
@@ -112,10 +112,10 @@ class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):
 
     @Trace.trace(logger)
     def apply(self):
-        self.model.set_grimace_config(self.temp_config)
+        self.model.recording.set_grimace_config(self.temp_config)
 
     @Trace.trace(logger)
     def accept(self):
-        if self.temp_config != self.model.grimace_config:
+        if self.temp_config != self.model.recording.grimace_config:
             self.apply()
         super().accept()

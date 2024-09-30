@@ -40,7 +40,7 @@ class ConfigureRecordingName(Ui_DRecordingName, QDialog):
     def recording_name_changed(self, *_):
         recording_name = self.txt_recording_name.text()
         recording_name = None if recording_name == "" else recording_name
-        recording_number = self.model.recording_number
+        recording_number = self.model.recording.recording_number
 
         prefix = "" if recording_name is None or recording_name == "" else recording_name + "_"
         preview_files = [prefix+file.format(recording_number=recording_number) for file in PREVIEW_FILES]
@@ -51,5 +51,5 @@ class ConfigureRecordingName(Ui_DRecordingName, QDialog):
     def accept(self):
         recording_name = self.txt_recording_name.text()
         recording_name = None if recording_name == "" else recording_name
-        self.model.set_recording_name(recording_name)
+        self.model.recording.set_recording_name(recording_name)
         super().accept()

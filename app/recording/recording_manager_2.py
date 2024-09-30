@@ -3,11 +3,14 @@ from pathlib import Path
 import cv2
 from PySide6.QtCore import QObject, QThread
 
+from app.config.camera import CameraConfig
 from app.config.grimace import GrimaceConfig
 from app.config.pose_top import PoseTopConfig
+from app.config.recording import RecordingConfig
+from app.config.video_files import VideoFilesConfig
 from app.dataflow.qvariable import QVariable
 from app.model.files import FILE_TYPES, FileBuilder
-from app.model.grimace_recorder_model import GrimaceRecorderModel
+from app.model.grimace_recorder_model import GrimaceRecorderModel, RecordingState, ApplicationState
 from app.recording.camera_recorder.camera_factory import CameraFactory
 from app.recording.camera_recorder.dual_camera_recorder import DualCameraRecorder
 from app.recording.front_video_pipeline_builder import FrontVideoPipelineBuilder
@@ -25,17 +28,26 @@ class RecordingManager(QObject):
         self.model = model
 
         self.camera_recorder = DualCameraRecorder()
+        self.camera_recorder.top_error_signal.connect(self.model.recording.set_top_camera_error)
+        self.camera_recorder.front_error_signal.connect(self.model.recording.set_front_camera_error)
 
         self.top_video_pipeline_builder = TopVideoPipelineBuilder()
         self.front_video_pipeline_builder = FrontVideoPipelineBuilder()
 
-        self.model.recording_state_signal.connect(self.on_recording_state_changed)
-        self.model.top_camera_config_signal.connect(self.on_top_camera_config_changed)
-        self.model.front_camera_config_signal.connect(self.on_front_camera_config_changed)
+        self.model.recording.recording_state_signal.connect(self.on_recording_state_changed)
 
-        self.model.video_files_config_signal.connect(self.on_video_files_config_changed)
-        self.model.grimace_config_signal.connect(self.on_grimace_config_changed)
-        self.model.pose_config_signal.connect(self.on_pose_config_changed)
+        self.model.recording.top_camera_config_signal.connect(self.on_top_camera_config_changed)
+        self.model.recording.front_camera_config_signal.connect(self.on_front_camera_config_changed)
+
+        self.model.recording.recording_config_signal.connect(self.on_recording_config_changed)
+        self.model.recording.video_files_config_signal.connect(self.on_video_files_config_changed)
+        self.model.recording.grimace_config_signal.connect(self.on_grimace_config_changed)
+        self.model.recording.pose_config_signal.connect(self.on_pose_config_changed)
+
+        self.model.recording.all_configs_signal.connect(self.on_all_config_changed)
+
+        self.model.recording.top_camera_error_signal.connect(self.on_camera_error)
+        self.model.recording.front_camera_error_signal.connect(self.on_camera_error)
 
         self.thread = QThread()
         self.moveToThread(self.thread)
@@ -49,6 +61,7 @@ class RecordingManager(QObject):
 
         self.top_video_pipeline_builder.set_preview_queue(self.top_preview_queue)
         self.front_video_pipeline_builder.set_preview_queue(self.front_preview_queue)
+        self.front_video_pipeline_builder.set_results_preview_queue(self.model.recording.grimace_results)
 
         self.top_video_pipeline = None
         self.front_video_pipeline = None
@@ -63,31 +76,21 @@ class RecordingManager(QObject):
         self.model.set_front_camera_frame(frame[0])
 
     def on_timestamp(self, timestamp: float):
-        self.model.set_recording_timer_time(timestamp)
+        self.model.recording.set_recording_timer_time(timestamp)
 
-    def on_top_camera_config_changed(self, config):
+    def apply_top_camera_config(self, config: CameraConfig):
         self.camera_recorder.stop()
         self.camera_recorder.set_top_camera(None)
 
         camera_source = CameraFactory.create_camera(config)
         self.camera_recorder.set_top_camera(camera_source)
-        self.camera_recorder.top_camera.set_video_buffer(self.top_preview_queue)
-        self.camera_recorder.start()
 
-        self.start_preview()
-        self.check_ready()
-
-    def on_front_camera_config_changed(self, config):
+    def apply_front_camera_config(self, config: CameraConfig):
         self.camera_recorder.stop()
         self.camera_recorder.set_front_camera(None)
 
         camera_source = CameraFactory.create_camera(config)
         self.camera_recorder.set_front_camera(camera_source)
-        self.camera_recorder.front_camera.set_video_buffer(self.front_preview_queue)
-        self.camera_recorder.start()
-
-        self.start_preview()
-        self.check_ready()
 
     def _find_max_recording_number(self, target_dir: Path):
         max_recording_number = 0
@@ -99,25 +102,25 @@ class RecordingManager(QObject):
         return max_recording_number
 
     def _update_recording_number(self):
-        if self.model.video_files_config.target_directory is None:
-            self.model.set_recording_number(1)
+        if self.model.recording.video_files_config.target_directory is None:
+            self.model.recording.set_recording_number(1)
         else:
             try:
-                target_dir = Path(self.model.video_files_config.target_directory)
+                target_dir = Path(self.model.recording.video_files_config.target_directory)
                 max_recording_number = self._find_max_recording_number(target_dir)
-                self.model.set_recording_number(max_recording_number + 1)
+                self.model.recording.set_recording_number(max_recording_number + 1)
             except Exception as e:
-                self.model.set_recording_number(1)
-                self.model.set_recording_not_ready(f"Error reading target directory: {e}")
+                self.model.recording.set_recording_number(1)
+                self.model.recording.set_recording_not_ready(f"Error reading target directory: {e}")
                 return
 
-    def on_video_files_config_changed(self):
+    def apply_video_files_config(self, config: VideoFilesConfig):
         self._update_recording_number()
-        self.check_ready()
 
-    def on_grimace_config_changed(self, config: GrimaceConfig):
-        self.model.set_recording_not_ready("Initializing Grimace Analyzer...")
+    def apply_recording_config(self, config: RecordingConfig):
+        pass
 
+    def apply_grimace_config(self, config: GrimaceConfig):
         gab = GrimaceAnalyzerBuilder()
         gab.set_model_version(config.grimace_model)
         gab.set_devices(config.frame_quality_device, config.face_cropper_device, config.grimace_scoring_device)
@@ -126,11 +129,7 @@ class RecordingManager(QObject):
         self.front_video_pipeline_builder.set_face_cropper(gab.build_face_cropper())
         self.front_video_pipeline_builder.set_grimace_scorer(gab.build_grimace_scorer())
 
-        self.check_ready()
-
-    def on_pose_config_changed(self, config: PoseTopConfig):
-        self.model.set_recording_not_ready("Initializing Pose Estimator...")
-
+    def apply_pose_config(self, config: PoseTopConfig):
         peb = PoseEstimatorBuilder()
         peb.set_model_version(config.pose_model)
         peb.set_device(config.pose_device)
@@ -139,32 +138,99 @@ class RecordingManager(QObject):
         self.top_video_pipeline_builder.set_top_pose_keypoints(peb.get_pose_keypoints())
         self.top_video_pipeline_builder.set_pose_preview_enabled(config.show_preview)
 
-        self.start_preview()
-        self.check_ready()
+    def on_top_camera_config_changed(self, config: CameraConfig):
+        self.model.recording.set_recording_changing_config("Applying Camera Config...")
+        self.apply_top_camera_config(config)
+        self.model.recording.config_applied_signal.emit()
+        self.model.recording.set_recording_idle()
+
+    def on_front_camera_config_changed(self, config: CameraConfig):
+        self.model.recording.set_recording_changing_config("Applying Camera Config...")
+        self.apply_front_camera_config(config)
+        self.model.recording.config_applied_signal.emit()
+        self.model.recording.set_recording_idle()
+
+    def on_recording_config_changed(self, config: RecordingConfig):
+        self.model.recording.set_recording_changing_config("Applying Recording Config...")
+        self.apply_recording_config(config)
+        self.model.recording.config_applied_signal.emit()
+        self.model.recording.set_recording_idle()
+
+    def on_video_files_config_changed(self, config: VideoFilesConfig):
+        self.model.recording.set_recording_changing_config("Applying Video Files Config...")
+        self.apply_video_files_config(config)
+        self.model.recording.config_applied_signal.emit()
+        self.model.recording.set_recording_idle()
+
+    def on_grimace_config_changed(self, config: GrimaceConfig):
+        self.model.recording.set_recording_changing_config("Initializing Grimace Analyzer...")
+        self.apply_grimace_config(config)
+        self.model.recording.config_applied_signal.emit()
+        self.model.recording.set_recording_idle()
+
+    def on_pose_config_changed(self, config: PoseTopConfig):
+        self.model.recording.set_recording_changing_config("Initializing Pose Estimator...")
+        self.apply_pose_config(config)
+        self.model.recording.config_applied_signal.emit()
+        self.model.recording.set_recording_idle()
+
+    def on_all_config_changed(self, top_camera_config: CameraConfig, front_camera_config: CameraConfig,
+                              recording_config: RecordingConfig, video_files_config: VideoFilesConfig,
+                              grimace_config: GrimaceConfig, pose_config: PoseTopConfig):
+        self.model.recording.set_recording_changing_config("Applying all configurations...")
+        self.apply_top_camera_config(top_camera_config)
+        self.apply_front_camera_config(front_camera_config)
+        self.apply_recording_config(recording_config)
+        self.apply_video_files_config(video_files_config)
+        self.apply_grimace_config(grimace_config)
+        self.apply_pose_config(pose_config)
+        self.model.recording.config_applied_signal.emit()
+        self.model.recording.set_recording_idle()
 
     def on_recording_state_changed(self, recording_state: str):
-        if recording_state == "starting":
+        if recording_state == RecordingState.STARTING:
             self.start_recording()
-        elif recording_state == "stopping":
+        elif recording_state == RecordingState.STOPPING:
             self.stop_recording()
+        elif recording_state == RecordingState.IDLE:
+            if self.model.application_state == ApplicationState.CLOSING:
+                return
+            self.model.recording.set_recording_changing_config("Starting preview...")
+            self.start_preview()
+            #self.model.recording.config_applied_signal.emit()
+            self.check_ready()
 
     def start_preview(self):
         self.stop()
 
-        top_camera_source = CameraFactory.create_camera(self.model.top_camera_config)
-        front_camera_source = CameraFactory.create_camera(self.model.front_camera_config)
+        try:
+            top_camera_source = CameraFactory.create_camera(self.model.recording.top_camera_config)
+        except Exception as e:
+            if self.model.recording.top_camera_error is None:
+                self.model.recording.set_top_camera_error(str(e))
+            top_camera_source = None
+
+        try:
+            front_camera_source = CameraFactory.create_camera(self.model.recording.front_camera_config)
+        except Exception as e:
+            if self.model.recording.front_camera_error is None:
+                self.model.recording.set_front_camera_error(str(e))
+            front_camera_source = None
 
         if top_camera_source is not None:
+            self.top_video_pipeline_builder.set_target_frame_rate(top_camera_source.get_fps())
             self.top_video_pipeline = self.top_video_pipeline_builder.build(preview=True)
             self.camera_recorder.set_top_camera(top_camera_source)
             self.camera_recorder.top_camera.set_video_buffer(self.top_video_pipeline.input_queue)
             self.top_video_pipeline.start()
+            self.model.recording.set_top_camera_error(None)
 
         if front_camera_source is not None:
             self.front_video_pipeline = self.front_video_pipeline_builder.build(preview=True)
             self.camera_recorder.set_front_camera(front_camera_source)
             self.camera_recorder.front_camera.set_video_buffer(self.front_video_pipeline.input_queue)
             self.front_video_pipeline.start()
+            self.model.recording.set_front_camera_error(None)
 
         if top_camera_source is not None or front_camera_source is not None:
             self.camera_recorder.start()
@@ -174,13 +240,16 @@ class RecordingManager(QObject):
 
         self.camera_recorder.stop()
         self.camera_recorder.wait()
+        print("A")
 
         if self.top_video_pipeline is not None:
             self.top_video_pipeline.wait()
+            print("B")
             self.top_video_pipeline = None
 
         if self.front_video_pipeline is not None:
             self.front_video_pipeline.wait()
+            print("C")
             self.front_video_pipeline = None
 
         print("Stopped!")
@@ -189,9 +258,9 @@ class RecordingManager(QObject):
         self.camera_recorder.set_front_camera(None)
 
     def prepare_recording(self, top_camera_source, front_camera_source):
-        recording_name = self.model.recording_name
-        target_directory = Path(self.model.video_files_config.target_directory)
-        recording_number = self.model.recording_number
+        recording_name = self.model.recording.recording_name
+        target_directory = Path(self.model.recording.video_files_config.target_directory)
+        recording_number = self.model.recording.recording_number
 
         prefix = recording_name + "_" if recording_name is not None else ""
 
@@ -211,8 +280,8 @@ class RecordingManager(QObject):
         grimace_results_file = Path(target_directory) / grimace_results_filename
         pose_estimation_results_file = Path(target_directory) / pose_estimation_results_filename
 
-        fourcc = cv2.VideoWriter.fourcc(*self.model.recording_config.codec)
-        frames_per_interval = round(self.model.grimace_config.frame_interval * front_camera_source.get_fps())
+        fourcc = cv2.VideoWriter.fourcc(*self.model.recording.recording_config.codec)
+        frames_per_interval = round(self.model.recording.grimace_config.frame_interval * front_camera_source.get_fps())
         self.front_video_pipeline_builder.set_frames_per_interval(frames_per_interval)
 
         top_vwb = VideoWriterBuilder()
@@ -225,7 +294,6 @@ class RecordingManager(QObject):
 
         self.top_video_pipeline_builder.set_video_writer(top_vwb.build())
         self.top_video_pipeline_builder.set_pose_results_file(pose_estimation_results_file)
-        self.top_video_pipeline_builder.set_target_frame_rate(front_camera_source.get_fps())
 
         front_vwb = VideoWriterBuilder()
         front_vwb.set_video_file(front_video_file)
@@ -241,56 +309,80 @@ class RecordingManager(QObject):
     def start_recording(self):
         self.stop()
 
-        top_camera_source = CameraFactory.create_camera(self.model.top_camera_config)
-        front_camera_source = CameraFactory.create_camera(self.model.front_camera_config)
+        top_camera_source = CameraFactory.create_camera(self.model.recording.top_camera_config)
+        front_camera_source = CameraFactory.create_camera(self.model.recording.front_camera_config)
 
         if top_camera_source is None or front_camera_source is None:
             raise ValueError("Both cameras must be set to start recording")
 
         self.prepare_recording(top_camera_source, front_camera_source)
 
+        self.top_video_pipeline_builder.set_target_frame_rate(front_camera_source.get_fps())
         self.top_video_pipeline = self.top_video_pipeline_builder.build()
-        recording_duration = self.model.recording_config.duration if self.model.recording_config.mode == "Timed" else None
+        recording_duration = self.model.recording.recording_config.duration if self.model.recording.recording_config.mode == "Timed" else None
         self.recording_timer = RecordingTimer(self.top_video_pipeline.input_queue, recording_duration)
         self.recording_timer.time_signal.connect(self.on_timestamp)
-        self.recording_timer.stop_signal.connect(self.model.set_recording_stopping)
+        self.recording_timer.stop_signal.connect(self.model.recording.set_recording_stopping)
 
         self.camera_recorder.set_top_camera(top_camera_source)
         self.camera_recorder.top_camera.set_video_buffer(self.recording_timer)
-        self.top_video_pipeline.start()
 
         self.front_video_pipeline = self.front_video_pipeline_builder.build()
         self.camera_recorder.set_front_camera(front_camera_source)
         self.camera_recorder.front_camera.set_video_buffer(self.front_video_pipeline.input_queue)
+
+        self.top_video_pipeline.core_error_signal.connect(self.on_recording_error)
+        self.front_video_pipeline.core_error_signal.connect(self.on_recording_error)
+
+        self.top_video_pipeline.analysis_error_signal.connect(self.on_recording_error)
+        self.front_video_pipeline.analysis_error_signal.connect(self.on_recording_error)
+
+        self.top_video_pipeline.start()
         self.front_video_pipeline.start()
 
         self.recording_timer.start()
         self.camera_recorder.start()
 
-        self.model.set_recording_running()
+        self.model.recording.set_recording_running()
 
     def stop_recording(self):
         self.stop()
-        self.model.set_recording_name(None)
+        self.model.recording.set_recording_name(None)
         self._update_recording_number()
-        self.start_preview()
-        self.check_ready()
+        self.model.recording.set_recording_idle()
 
     def is_ready(self) -> str | None:
         if self.camera_recorder.top_camera is None:
             return "Top camera not properly configured"
         if self.camera_recorder.front_camera is None:
             return "Front camera not properly configured"
-        if self.model.video_files_config.target_directory is None:
+        if self.model.recording.video_files_config.target_directory is None:
             return "Target directory not selected"
 
     def check_ready(self):
         reason = self.is_ready()
         if reason is None:
-            self.model.set_recording_ready()
+            self.model.recording.set_recording_ready()
         else:
-            self.model.set_recording_not_ready(reason)
+            self.model.recording.set_recording_not_ready(reason)
 
-    def on_config_changed(self):
-        if self.model.recording_state in ["ready", "not_ready"]:
-            self.check_ready()
+    def recording_error(self, error: str):
+        print("Recording error:", error)
+        self.model.recording.set_recording_error(error)
+        self.model.recording.set_recording_stopping()
+
+    def on_camera_error(self, error: str):
+        if error is None:
+            return
+
+        if self.model.recording.recording_state == RecordingState.STARTING or self.model.recording.recording_state == RecordingState.RECORDING:
+            self.recording_error(error)
+        else:
+            self.stop()
+            self.model.recording.set_recording_idle()
+
+    def on_recording_error(self, error: str):
+        if error is None:
+            return
+
+        self.recording_error(error)

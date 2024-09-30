@@ -54,7 +54,6 @@ class CameraFactory:
         None if the camera config is valid but incomplete
         :raises: ValueError if the camera config is invalid
         """
-        print(config)
         if config.camera_type == "Pylon":
             return CameraFactory.create_pylon_camera(config)
         elif config.camera_type == "Video File":

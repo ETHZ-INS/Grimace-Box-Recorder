@@ -1,3 +1,4 @@
+import random
 import time
 from typing import Optional
 
@@ -246,6 +247,8 @@ class DualCameraRecorder(QThread):
             if top_camera is not None:
                 try:
                     ret, frame_number, timestamp, frame = self.top_camera.source.grab_frame()
+                    #if random.random() < 0.001:
+                    #    raise Exception("Random error")
                     if ret:
                         self.handle_frame(top_camera, frame, timestamp)
                         any_frames = True
@@ -253,9 +256,9 @@ class DualCameraRecorder(QThread):
                     break
                 except Exception as e:
                     logger.exception("Error grabbing frame from top camera")
-                    top_camera.close()
-                    top_camera = None
                     self.top_error_signal.emit(str(e))
+                    #self.front_error_signal.emit(str(e))
+                    break
 
             if front_camera is not None:
                 try:
@@ -267,9 +270,9 @@ class DualCameraRecorder(QThread):
                     break
                 except Exception as e:
                     logger.exception("Error grabbing frame from front camera")
-                    front_camera.close()
-                    front_camera = None
                     self.front_error_signal.emit(str(e))
+                    #self.top_error_signal.emit(str(e))
+                    break
 
             if not any_frames:
                 # No frames were grabbed, sleep for a short time
@@ -280,10 +283,12 @@ class DualCameraRecorder(QThread):
         if top_camera is not None:
             top_camera.source.stop()
             if top_camera.video_buffer is not None:
+                print("Closing top camera video buffer")
                 top_camera.video_buffer.close()
         if front_camera is not None:
             front_camera.source.stop()
             if front_camera.video_buffer is not None:
+                print("Closing front camera video buffer")
                 front_camera.video_buffer.close()
 
     def check_health(self):

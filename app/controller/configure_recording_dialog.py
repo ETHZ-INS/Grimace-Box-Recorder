@@ -20,7 +20,7 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
         self.setupUi(self)
 
         self.model = model
-        self.temp_config = deepcopy(model.recording_config)
+        self.temp_config = deepcopy(model.recording.recording_config)
 
         self.dpd_recording_mode.clear()
         self.dpd_recording_mode.addItems(self.temp_config.MODES)
@@ -84,10 +84,10 @@ class ConfigureRecording(Ui_DConfigureRecording, QDialog):
 
     @Trace.trace(logger)
     def apply(self):
-        self.model.set_recording_config(self.temp_config)
+        self.model.recording.set_recording_config(self.temp_config)
 
     @Trace.trace(logger)
     def accept(self):
-        if self.temp_config != self.model.recording_config:
+        if self.temp_config != self.model.recording.recording_config:
             self.apply()
         super().accept()

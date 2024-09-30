@@ -20,7 +20,7 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
         self.setupUi(self)
 
         self.model = model
-        self.temp_config = copy.deepcopy(model.video_files_config)
+        self.temp_config = copy.deepcopy(model.recording.video_files_config)
 
         if self.temp_config.target_directory is not None:
             self.lbl_selected_folder.setText(self.temp_config.target_directory)
@@ -46,11 +46,11 @@ class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):
             dlg.exec()
             raise ValueError("Invalid Configuration")
 
-        self.model.set_video_files_config(self.temp_config)
+        self.model.recording.set_video_files_config(self.temp_config)
 
     @Trace.trace(logger)
     def accept(self):
-        if self.temp_config != self.model.video_files_config:
+        if self.temp_config != self.model.recording.video_files_config:
             self.apply()
         super().accept()
 

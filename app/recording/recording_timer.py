@@ -51,9 +51,19 @@ class RecordingTimer(QObject, IQueue, metaclass=RecordingTimerMeta):
         self.stop_time = None
 
     def stop(self):
+        if self.finished or not self.started:
+            return
+
         self.finished = True
         self.stop_time = self.latest_time
         self.stop_signal.emit()
+
+    def cancel(self):
+        if self.finished or not self.started:
+            return
+
+        self.finished = True
+        self.stop_time = self.latest_time
 
     def enqueue(self, item):
         timestamp = item[2]
@@ -70,4 +80,7 @@ class RecordingTimer(QObject, IQueue, metaclass=RecordingTimerMeta):
             self.stop()
 
     def close(self):
+        # If the timer, being an IQueue, is closed, it should stop counting time and
+        # propagate the close command to the output queue.
+        self.cancel()
         self.output_queue.close()

@@ -1,7 +1,6 @@
 from datetime import timedelta
 
-from app.model.grimace_recorder_model import GrimaceRecorderModel
-
+from app.model.grimace_recorder_model import GrimaceRecorderModel, RecordingState
 
 OVERVIEW_TEMPLATE = """
 ## Overview for {recording_state}:  
@@ -22,31 +21,31 @@ class OverviewRenderer:
     """
     def __init__(self, model: GrimaceRecorderModel):
         self.model = model
-        self.model.recording_state_signal.connect(self.render)
-        self.model.recording_config_signal.connect(self.render)
-        self.model.video_files_config_signal.connect(self.render)
-        self.model.grimace_config_signal.connect(self.render)
-        self.model.pose_config_signal.connect(self.render)
-        self.model.recording_number_signal.connect(self.render)
-        self.model.recording_name_signal.connect(self.render)
+        self.model.recording.recording_state_signal.connect(self.render)
+        self.model.recording.recording_config_signal.connect(self.render)
+        self.model.recording.video_files_config_signal.connect(self.render)
+        self.model.recording.grimace_config_signal.connect(self.render)
+        self.model.recording.pose_config_signal.connect(self.render)
+        self.model.recording.recording_number_signal.connect(self.render)
+        self.model.recording.recording_name_signal.connect(self.render)
         self.model.ask_for_identifier_signal.connect(self.render)
         self.render()
 
     def render(self):
-        if self.model.recording_state in ["recording", "stopping"]:
+        if self.model.recording.recording_state in [RecordingState.RECORDING, RecordingState.STOPPING]:
             recording_state = "Current Recording"
         else:
             recording_state = "Next Recording"
 
-        if self.model.video_files_config.target_directory is None:
+        if self.model.recording.video_files_config.target_directory is None:
             target_directory = "<span style='color:red'><i>Not Set</i></span>"
         else:
-            target_directory = self.model.video_files_config.target_directory
+            target_directory = self.model.recording.video_files_config.target_directory
 
-        if self.model.recording_config.mode == "Manual":
+        if self.model.recording.recording_config.mode == "Manual":
             recording_duration = "Manual"
-        elif self.model.recording_config.mode == "Timed":
-            recording_duration = self.model.recording_config.duration
+        elif self.model.recording.recording_config.mode == "Timed":
+            recording_duration = self.model.recording.recording_config.duration
             if recording_duration is not None:
                 recording_duration = str(timedelta(seconds=recording_duration))
             else:
@@ -54,15 +53,15 @@ class OverviewRenderer:
         else:
             recording_duration = "error"
 
-        if self.model.recording_name is None:
-            if self.model.ask_for_identifier and self.model.recording_state in ["ready", "not_ready"]:
+        if self.model.recording.recording_name is None:
+            if self.model.ask_for_identifier and self.model.recording.recording_state in [RecordingState.READY, RecordingState.NOT_READY]:
                 recording_name = "<span style='color:gray'><i>Will be asked at the start of the recording</i></span>"
             else:
                 recording_name = "<span style='color:gray'><i>None</i></span>"
         else:
-            recording_name = self.model.recording_name
+            recording_name = self.model.recording.recording_name
 
-        frame_interval_seconds = round(self.model.grimace_config.frame_interval)
+        frame_interval_seconds = round(self.model.recording.grimace_config.frame_interval)
 
         minutes = frame_interval_seconds // 60
         seconds = frame_interval_seconds % 60
@@ -72,24 +71,18 @@ class OverviewRenderer:
 
         grimace_scoring_interval_str = minutes_str + (" " if minutes and seconds else "") + seconds_str
 
-        pose_preview = "Enabled" if self.model.pose_config.show_preview else "Disabled"
+        pose_preview = "Enabled" if self.model.recording.pose_config.show_preview else "Disabled"
 
         overview = OVERVIEW_TEMPLATE.format(
             target_directory=target_directory,
             recording_state=recording_state,
-            recording_number=self.model.recording_number,
+            recording_number=self.model.recording.recording_number,
             recording_name=recording_name,
             recording_duration=recording_duration,
-            grimace_model=self.model.grimace_config.grimace_model,
+            grimace_model=self.model.recording.grimace_config.grimace_model,
             grimace_scoring_interval=grimace_scoring_interval_str,
-            pose_model=self.model.pose_config.pose_model,
+            pose_model=self.model.recording.pose_config.pose_model,
             pose_preview=pose_preview
         )
 
         self.model.set_overview_text(overview)
-
-    def __del__(self):
-        self.model.recording_state_signal.disconnect(self.render)
-        self.model.recording_config_signal.disconnect(self.render)
-        self.model.grimace_config_signal.disconnect(self.render)
-        self.model.pose_config_signal.disconnect(self.render)

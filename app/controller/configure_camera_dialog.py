@@ -1,5 +1,8 @@
+import os
+import sys
 from copy import deepcopy
 from dataclasses import replace
+from pathlib import Path
 from typing import Literal
 
 from PySide6.QtCore import Signal
@@ -16,6 +19,12 @@ from util.trace import Trace
 
 logger = logging.getLogger("grimace_recorder.app.analysis.configure_camera_dialog")
 
+bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
+camera_config_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'camera_config')))
+
+top_camera_config_file = camera_config_folder / "top.pfs"
+front_camera_config_file = camera_config_folder / "front.pfs"
+
 
 class ConfigureCamera(Ui_DConfigureCamera, QDialog):
     @Trace.trace(logger)
@@ -26,12 +35,14 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
         self.model = model
         self.camera = camera
 
-        self.temp_config = deepcopy(model.top_camera_config if camera == "top" else model.front_camera_config)
+        self.temp_config = deepcopy(model.recording.top_camera_config if camera == "top" else model.recording.front_camera_config)
 
         if camera == "top":
             self.setWindowTitle("Configure Top Camera")
+            self.temp_config.config_file = str(top_camera_config_file)
         else:
             self.setWindowTitle("Configure Front Camera")
+            self.temp_config.config_file = str(front_camera_config_file)
 
         # Video File instead of a camera is only available in debug mode
         debug_mode = model.debug_mode
@@ -50,13 +61,13 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
             self.stk_camera.setCurrentIndex(-1)
 
         available_cameras = Devices.get_available_cameras()
-        cameras_in_use = [model.front_camera_config.camera_id if camera == "top" else model.top_camera_config.camera_id]
+        cameras_in_use = [model.recording.front_camera_config.camera_id if camera == "top" else model.recording.top_camera_config.camera_id]
 
         available_cameras = [camera for camera in available_cameras if camera not in cameras_in_use]
 
         self.dpd_camera.clear()
         self.dpd_camera.addItems([None] + available_cameras)  # Add None to allow the user to unselect the camera
-        if self.temp_config.camera_id is not None:
+        if self.temp_config.camera_id is not None and self.temp_config.camera_id in available_cameras:
             self.dpd_camera.setCurrentText(self.temp_config.camera_id)
         else:
             self.dpd_camera.setCurrentIndex(-1)
@@ -94,13 +105,13 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
     @Trace.trace(logger)
     def apply(self):
         if self.camera == "top":
-            self.model.set_top_camera_config(self.temp_config)
+            self.model.recording.set_top_camera_config(self.temp_config)
         else:
-            self.model.set_front_camera_config(self.temp_config)
+            self.model.recording.set_front_camera_config(self.temp_config)
 
     @Trace.trace(logger)
     def accept(self):
-        if self.temp_config != self.model.top_camera_config if self.camera == "top" else self.model.front_camera_config:
+        if self.temp_config != self.model.recording.top_camera_config if self.camera == "top" else self.model.recording.front_camera_config:
             self.apply()
         super().accept()
 

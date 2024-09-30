@@ -5,6 +5,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Tuple
 
+import cv2
 import numpy as np
 from PySide6 import QtCore
 from PySide6.QtGui import QPixmap, QImage, QShortcut, QKeySequence
@@ -16,7 +17,9 @@ from app.controller.configure_grimace_scoring_dialog import ConfigureGrimaceAnal
 from app.controller.configure_pose_tracking_dialog import ConfigurePoseEstimation
 from app.controller.configure_recording_dialog import ConfigureRecording
 from app.controller.configure_recording_name_dialog import ConfigureRecordingName
-from app.model.grimace_recorder_model import GrimaceRecorderModel
+from app.controller.grimace_results_widget import GrimaceResults
+from app.model.grimace_recorder_model import GrimaceRecorderModel, RecordingState, MessageBoxState, ProgressDialogState, \
+    ApplicationState
 from app.model.overview_renderer import OverviewRenderer
 from app.recording.recording_manager_2 import RecordingManager
 
@@ -58,27 +61,29 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.action_configure_grimace_scoring.triggered.connect(self.configure_grimace)
         self.action_configure_pose_tracking.triggered.connect(self.configure_pose)
 
+        self.action_open_grimace_results_window.triggered.connect(self.open_grimace_results_window)
+
         self.action_save_project.triggered.connect(self.save_project)
         self.action_save_project_as.triggered.connect(self.save_project_as)
         self.action_load_project.triggered.connect(self.load_project)
 
         self.model.debug_mode_signal.connect(self.on_debug_mode)
 
-        self.model.recording_state_signal.connect(self.on_recording_state)
-        self.model.recording_timer_time_signal.connect(self.on_recording_timer_time)
+        self.model.recording.recording_state_signal.connect(self.on_recording_state)
+        self.model.recording.recording_timer_time_signal.connect(self.on_recording_timer_time)
 
         self.model.top_camera_frame_signal.connect(self.on_top_camera_frame)
         self.model.front_camera_frame_signal.connect(self.on_front_camera_frame)
 
-        self.model.top_camera_error_signal.connect(self.on_top_camera_error)
-        self.model.front_camera_error_signal.connect(self.on_front_camera_error)
+        self.model.recording.top_camera_error_signal.connect(self.on_top_camera_error)
+        self.model.recording.front_camera_error_signal.connect(self.on_front_camera_error)
 
         self.model.overview_text_signal.connect(self.on_overview)
         self.model.warnings_text_signal.connect(self.on_warnings)
 
-        self.model.message_box_signal.connect(self.on_message_box)
-        self.model.progress_dialog_signal.connect(self.on_progress_dialog)
-        self.model.progress_dialog_progress_signal.connect(self.on_progress_dialog_progress)
+        self.model.message_box.change_signal.connect(self.on_message_box_change)
+        self.model.progress_dialog.change_signal.connect(self.on_progress_dialog_change)
+        self.model.progress_dialog.progress_signal.connect(self.on_progress_dialog_progress)
 
         self.btn_record.clicked.connect(self.btn_record_clicked)
         self.chb_identifier.stateChanged.connect(self.chb_identifier_state_changed)
@@ -100,13 +105,18 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.message_box = None
         self.progress_dialog = None
 
+        self.grimace_results_window = None
+
         self.on_debug_mode(self.model.debug_mode)
-        self.on_recording_state(self.model.recording_state, self.model.recording_state_reason)
-        self.on_recording_timer_time(self.model.recording_timer_time)
+        self.on_recording_state(self.model.recording.recording_state, self.model.recording.recording_state_reason)
+        self.on_recording_timer_time(self.model.recording.recording_timer_time)
         self.on_top_camera_frame(self.model.top_camera_frame)
-        self.on_top_camera_error(self.model.top_camera_error)
-        self.on_front_camera_error(self.model.front_camera_error)
+        self.on_top_camera_error(self.model.recording.top_camera_error)
+        self.on_front_camera_error(self.model.recording.front_camera_error)
         self.on_front_camera_frame(self.model.front_camera_frame)
+
+        self.model.recording.set_recording_idle()
+        self.model.recording.apply_all_configs()
 
     def on_debug_mode(self, debug_mode: bool):
         self.lbl_debug_mode.setVisible(debug_mode)
@@ -135,7 +145,9 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.action_save_project.setEnabled(True)
         self.action_save_project_as.setEnabled(True)
 
-    def _set_status_message(self, message: str, color: str):
+    def _set_status_message(self, message: str, color: str, error: str = None):
+        if error is not None:
+            message = f"<span style='color: red'> Recording Stopped: {error}</span>  \n" + message
         self.lbl_message.setText(message)
         self.lbl_message.setStyleSheet(f"color: {color}")
 
@@ -146,16 +158,21 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             self.btn_record.setText("Stop Recording")
         self.btn_record.setEnabled(enabled)
 
-    def on_recording_state(self, recording_state: str, recording_state_reason: str, error: str = None):
-        if recording_state == "starting":
+    def on_recording_state(self, recording_state: RecordingState, recording_state_reason: str, error: str = None):
+        if self.model.application_state == ApplicationState.CLOSING and recording_state not in (
+                RecordingState.RECORDING, RecordingState.STARTING, RecordingState.STOPPING):
+            self.close()
+            return
+
+        if recording_state == RecordingState.STARTING:
             self._set_status_message("Recording starting...", "blue")
             self._set_start_button(False, False)
             self._set_menu_enabled(False)
-        elif recording_state == "stopping":
+        elif recording_state == RecordingState.STOPPING:
             self._set_status_message("Recording stopping...", "blue")
             self._set_start_button(False, False)
             self._set_menu_enabled(False)
-        elif recording_state == "recording":
+        elif recording_state == RecordingState.RECORDING:
             self._set_status_message("Recording...", "blue")
             self._set_start_button(False, True)
             self._set_menu_enabled(False)
@@ -167,18 +184,22 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             # I couldn't make error a state, because there can be an error during the recording, but at the same time
             # the application may be ready to record again. So I had to make the error a separate thing. The states
             # are mutually exclusive, but the error can coexist with at least some of the states.
-            if error is not None:
-                self._set_status_message(error, "red")
-
-            if recording_state == "ready":
-                if error is None:
-                    self._set_status_message("Ready to Record", "green")
-                self._set_start_button(True, True)
-            elif recording_state == "not_ready":
-                if error is None:
-                    self._set_status_message("Not ready: " + recording_state_reason, "orange")
+            if recording_state == RecordingState.IDLE:
+                self._set_status_message("Not ready", "orange", error)
                 self._set_start_button(True, False)
-            self._set_menu_enabled(True)
+                self._set_menu_enabled(False)
+            elif recording_state == RecordingState.NOT_READY:
+                self._set_status_message("Not ready: " + recording_state_reason, "orange", error)
+                self._set_start_button(True, False)
+                self._set_menu_enabled(True)
+            elif recording_state == RecordingState.CHANGING_CONFIG:
+                self._set_status_message(recording_state_reason, "orange", error)
+                self._set_start_button(True, False)
+                self._set_menu_enabled(False)
+            elif recording_state == RecordingState.READY:
+                self._set_status_message("Ready to Record", "green", error)
+                self._set_start_button(True, True)
+                self._set_menu_enabled(True)
 
     def on_overview(self, overview: str):
         self.lbl_overview.setText(overview)
@@ -247,7 +268,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.on_front_camera_frame(front_frame)
 
     def on_top_camera_frame(self, frame: ndarray | None):
-        if self.model.top_camera_error is not None:
+        if self.model.recording.top_camera_error is not None:
             return
 
         if (frame is None) != (self.top_frame_shape is None):
@@ -262,12 +283,15 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         video_label_width = self.lbl_video_top.width()
         video_label_height = self.lbl_video_top.height()
 
+        #cv2.imshow("frame", frame)
+        #cv2.waitKey(1)
+
         frame = self._scale_frame(frame, video_label_width, video_label_height)
 
         self.lbl_video_top.setPixmap(frame)
 
     def on_front_camera_frame(self, frame: ndarray | None):
-        if self.model.front_camera_error is not None:
+        if self.model.recording.front_camera_error is not None:
             return
 
         if (frame is None) != (self.front_frame_shape is None):
@@ -321,7 +345,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         return selected_file
 
     def configure_video_files(self):
-        video_files_config = deepcopy(self.model.video_files_config)
+        video_files_config = deepcopy(self.model.recording.video_files_config)
 
         if video_files_config.target_directory is None:
             # Default path when opening the file dialog
@@ -333,7 +357,7 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         if selected_directory:
             print("Setting Directory:", selected_directory)
             video_files_config.target_directory = selected_directory
-            self.model.set_video_files_config(video_files_config)
+            self.model.recording.set_video_files_config(video_files_config)
 
     def configure_grimace(self):
         dlg = ConfigureGrimaceAnalysis(self, self.model)
@@ -349,15 +373,17 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
             res = dlg.exec()
             return res == 1
         else:
-            self.model.set_recording_name(None)
+            self.model.recording.set_recording_name(None)
             return True
 
     def start_recording(self):
-        if self.model.recording_state != "ready":
+        if self.model.recording.recording_state != RecordingState.READY:
             return
         if not self._enter_identifier():
             return
-        self.model.set_recording_starting()
+        self.model.recording.grimace_results.clear()
+        self.model.recording.set_recording_starting()
+        self.open_grimace_results_window()
 
     def _confirm_stop_recording(self) -> bool:
         msg = QMessageBox(parent=self)
@@ -373,17 +399,27 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         return True
 
     def stop_recording(self):
-        if self.model.recording_state != "recording":
+        if self.model.recording.recording_state != RecordingState.RECORDING:
             return
-        if self.model.auto_stop and not self._confirm_stop_recording():
+        if self.model.recording.recording_config.mode == "Timed" and not self._confirm_stop_recording():
             return
-        self.model.set_recording_stopping()
+        self.model.recording.set_recording_stopping()
 
     def btn_record_clicked(self):
-        if self.model.recording_state == "recording":
+        if self.model.recording.recording_state == RecordingState.RECORDING:
             self.stop_recording()
         else:
             self.start_recording()
+
+    def open_grimace_results_window(self):
+        if self.grimace_results_window is not None and self.grimace_results_window.isVisible():
+            return
+
+        if self.grimace_results_window is not None:
+            self.grimace_results_window.close()
+
+        self.grimace_results_window = GrimaceResults(self, self.model)
+        self.grimace_results_window.show()
 
     def _select_save_file(self):
         if self.model.config_file is None:
@@ -424,29 +460,29 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         selected_file = self._select_load_file()
         if selected_file:
             self.model.config_file = selected_file
-        self.model.set_loading()
+        self.model.set_loading(True)
 
-    def on_message_box(self, state: str, title: str, text: str):
-        if state == "hidden":
+    def on_message_box_change(self, state: str, title: str, text: str):
+        if state == MessageBoxState.VISIBLE:
             if self.message_box is not None:
                 self.message_box.close()
                 self.message_box = None
-        elif state == "visible":
+        elif state == MessageBoxState.VISIBLE:
             if self.message_box is None:
                 self.message_box = QMessageBox(parent=self)
             self.message_box.setWindowTitle(title)
             self.message_box.setText(text)
             self.message_box.setIcon(QMessageBox.Icon.Information)
             self.message_box.exec()
-            if self.model.message_box_state == "visible":
-                self.model.close_message_box()
+            if self.model.message_box.state == MessageBoxState.VISIBLE:
+                self.model.recording.close_message_box()
 
-    def on_progress_dialog(self, state: str, title: str, text: str, progress: int):
-        if state == "finished":
+    def on_progress_dialog_change(self, state: str, title: str, text: str, progress: int):
+        if state == ProgressDialogState.FINISHED:
             if self.progress_dialog is not None:
                 self.progress_dialog.close()
                 self.progress_dialog = None
-        elif state == "running":
+        elif state == ProgressDialogState.RUNNING:
             if self.progress_dialog is None:
                 self.progress_dialog = QProgressDialog(text, "", 0, 100, self)
                 self.progress_dialog.setWindowTitle(title)
@@ -472,7 +508,13 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
         self.update_video_label_size()
 
     def closeEvent(self, event):
-        # Delete the overview renderer to make sure its signals are disconnected from the model
-        del self.overview_renderer
+        # TODO: do we need this check?
+        if self.model.application_state != ApplicationState.CLOSING:
+            self.model.set_application_closing()
+
+        if self.model.recording.recording_state in (RecordingState.RECORDING, RecordingState.STARTING, RecordingState.STOPPING):
+            self.stop_recording()
+            event.ignore()
+            return
 
     # endregion

@@ -20,7 +20,7 @@ class ConfigurePoseEstimation(Ui_DConfigurePoseTracking, QDialog):
         self.setupUi(self)
 
         self.model = model
-        self.temp_config = deepcopy(model.pose_config)
+        self.temp_config = deepcopy(model.recording.pose_config)
 
         debug_mode = model.debug_mode
 
@@ -76,10 +76,10 @@ class ConfigurePoseEstimation(Ui_DConfigurePoseTracking, QDialog):
 
     @Trace.trace(logger)
     def apply(self):
-        self.model.set_pose_config(self.temp_config)
+        self.model.recording.set_pose_config(self.temp_config)
 
     @Trace.trace(logger)
     def accept(self):
-        if self.temp_config != self.model.pose_config:
+        if self.temp_config != self.model.recording.pose_config:
             self.apply()
         super().accept()

@@ -264,6 +264,7 @@ class Ui_WGrimaceBox(object):
         self.lbl_message.setObjectName(u"lbl_message")
         sizePolicy3.setHeightForWidth(self.lbl_message.sizePolicy().hasHeightForWidth())
         self.lbl_message.setSizePolicy(sizePolicy3)
+        self.lbl_message.setTextFormat(Qt.MarkdownText)
         self.lbl_message.setAlignment(Qt.AlignCenter)
 
         self.horizontalLayout_2.addWidget(self.lbl_message)
@@ -334,7 +335,7 @@ class Ui_WGrimaceBox(object):
     # setupUi
 
     def retranslateUi(self, WGrimaceBox):
-        WGrimaceBox.setWindowTitle(QCoreApplication.translate("WGrimaceBox", u"GrimAce", None))
+        WGrimaceBox.setWindowTitle(QCoreApplication.translate("WGrimaceBox", u"Grimace Box", None))
         self.action_save_project.setText(QCoreApplication.translate("WGrimaceBox", u"Save Project", None))
 #if QT_CONFIG(tooltip)
         self.action_save_project.setToolTip(QCoreApplication.translate("WGrimaceBox", u"Save project configuration (cameras, settings, etc.) to a file for later use", None))
@@ -402,7 +403,7 @@ class Ui_WGrimaceBox(object):
 "Front Video Filename: front_1.avi  \n"
 "", None))
         self.lbl_warnings.setText(QCoreApplication.translate("WGrimaceBox", u"## Warnings", None))
-        self.lbl_debug_mode.setText(QCoreApplication.translate("WGrimaceBox", u"Debug Mode", None))
+        self.lbl_debug_mode.setText(QCoreApplication.translate("WGrimaceBox", u"SU Mode", None))
 #if QT_CONFIG(tooltip)
         self.btn_record.setToolTip("")
 #endif // QT_CONFIG(tooltip)

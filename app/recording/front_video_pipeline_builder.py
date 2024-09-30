@@ -70,6 +70,8 @@ class FrontVideoPipelineBuilder:
             raise ValueError("grimace_scorer is not set")
         if self.frames_per_interval is None:
             raise ValueError("frames_per_interval is not set")
+        if self.results_preview_queue is None:
+            raise ValueError("results_preview_queue is not set")
 
         # TODO: add results preview queue and make it configurable
         return GrimaceAnalyzerV1(self.frame_quality_scorer, self.face_cropper, self.grimace_scorer,
