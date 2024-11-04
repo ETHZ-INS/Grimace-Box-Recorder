@@ -1,6 +1,12 @@
+import logging
+
 import cv2
 
 from app.dataflow.qqueue import IQueue
+from util.trace import Trace
+
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class PoseRenderer(IQueue):
@@ -20,5 +26,6 @@ class PoseRenderer(IQueue):
 
         self.output_queue.enqueue((frame, frame_number, timestamp))
 
+    @Trace.trace(logger)
     def close(self):
         self.output_queue.close()

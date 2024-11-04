@@ -15,9 +15,10 @@ from app.dataflow.qlist import QList
 
 import logging
 
+from app.model.grimace_recorder_model import GrimaceRecorderModel
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.grimace_results_widget")
+logger = logging.getLogger("grimace_box."+__name__)
 
 bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
 res_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'res')))
@@ -103,13 +104,13 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
     applied_signal = Signal(VideoFilesConfig)
 
     @Trace.trace(logger)
-    def __init__(self, parent, grimace_images: QList):
+    def __init__(self, parent, model: GrimaceRecorderModel):
         super().__init__(parent)
         self.setupUi(self)
 
         self.lbl_grimace_legend.setPixmap(QPixmap(str(grimace_legend_image_file)))
 
-        self.grimace_images = grimace_images
+        self.model = model
         self.num_images = 0
         self.num_frames_sampled = 0
 
@@ -127,8 +128,8 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
         self.clear_images()
         self.refresh()
 
-        self.grimace_images.list_cleared.connect(self.clear_images)
-        self.grimace_images.list_changed.connect(self.refresh)
+        self.model.recording.grimace_results.list_cleared.connect(self.clear_images)
+        self.model.recording.grimace_results.list_changed.connect(self.refresh)
 
         self.setMinimumWidth(0)
         self.adjustSize()
@@ -160,12 +161,12 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
     def refresh(self):
         # The way I'm keeping track of the number of images is a bit hacky, but it works for now
 
-        if len(self.grimace_images.items) < self.num_images:
+        if len(self.model.recording.grimace_results.items) < self.num_images:
             # If the list was cleared (or for some other reason less images are in the list than before),
             # remove all images from the layout
             self.clear_images()
 
-        for image, grimace_scores in self.grimace_images.items[self.num_images:]:
+        for image, grimace_scores in self.model.recording.grimace_results.items[self.num_images:]:
             # Add all images in the list that have not been added yet to the layout
 
             label = QLabel()
@@ -202,7 +203,7 @@ class GrimaceResults(Ui_GGrimaceResults, QDialog):
             self.frm_grimace_images.layout().addWidget(label)
             self.num_images += 1
 
-        all_grimace_scores = [grimace_scores for _, grimace_scores in self.grimace_images.items if
+        all_grimace_scores = [grimace_scores for _, grimace_scores in self.model.recording.grimace_results.items if
                               grimace_scores is not None]
         if len(all_grimace_scores) == 0:
             mean_grimace_score = np.nan

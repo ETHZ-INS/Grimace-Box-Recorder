@@ -61,7 +61,7 @@ ExposureAuto	Off
 ExposureTimeRaw	1500
 ShutterMode	Global
 AcquisitionFrameRateEnable	1
-AcquisitionFrameRateAbs	25
+AcquisitionFrameRateAbs	30.0003
 MedianFilter	0
 LineSelector	Line1
 LineMode	Input

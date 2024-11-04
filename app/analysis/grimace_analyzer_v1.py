@@ -11,7 +11,7 @@ import logging
 
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.grimace_analyzer")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class GrimaceAnalyzerV1(QueueProcess):
@@ -72,7 +72,8 @@ class GrimaceAnalyzerV1(QueueProcess):
 
             if max_score < self.min_score or tries >= 50:  # TODO: decide on a good number of tries or make it configurable
                 logger.info("No valid frame found in interval")
-                self.results_preview_queue.enqueue((None, None))
+                if self.results_preview_queue is not None:
+                    self.results_preview_queue.enqueue((None, None))
                 break
 
             max_score_index = np.argmax(interval_scores)
@@ -88,7 +89,8 @@ class GrimaceAnalyzerV1(QueueProcess):
                 logger.info("Successfully cropped frame with index %s", max_score_index)
                 grimace_scores = self.grimace_scorer.score(cropped_frame)
 
-                self.results_preview_queue.enqueue((cropped_frame, grimace_scores))
+                if self.results_preview_queue is not None:
+                    self.results_preview_queue.enqueue((cropped_frame, grimace_scores))
                 self.output_buffer.enqueue((frame_index, timestamp, grimace_scores))
                 break
             tries += 1

@@ -1,9 +1,15 @@
+import logging
+
 import cv2
 
 from app.dataflow.qqueue import IQueue
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class FPSRenderer(IQueue):
+    @Trace.trace(logger)
     def __init__(self, output_queue: IQueue, timestamp_history_size: int = 10):
         self.output_queue = output_queue
         self.timestamp_history_size = timestamp_history_size
@@ -11,6 +17,7 @@ class FPSRenderer(IQueue):
         self.timestamp_history = []
         self.timestamp_index = 0
 
+    @Trace.trace(logger)
     def reset(self):
         self.timestamp_history = []
         self.timestamp_index = 0
@@ -44,5 +51,6 @@ class FPSRenderer(IQueue):
 
         self.output_queue.enqueue((frame, frame_number, timestamp))
 
+    @Trace.trace(logger)
     def close(self):
         self.output_queue.close()

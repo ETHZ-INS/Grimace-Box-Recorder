@@ -9,7 +9,7 @@ import logging
 
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.recording.video_writer")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class BufferVideoWriter(QueueProcess):

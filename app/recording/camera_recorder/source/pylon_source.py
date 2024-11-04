@@ -1,14 +1,17 @@
 import logging
+import time
 
 import numpy as np
 from pypylon import pylon
 
 from app.recording.camera_recorder.source.base_source import CameraSource
+from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.recording.camera_recorder.source.pylon_source")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class PylonCameraSource(CameraSource):
+    @Trace.trace(logger)
     def __init__(self, camera: pylon.InstantCamera):
         self.camera = camera
         self.width = camera.Width.GetValue()
@@ -19,21 +22,27 @@ class PylonCameraSource(CameraSource):
         else:
             self.fps = camera.AcquisitionFrameRate.GetValue()
 
+    @Trace.trace(logger)
     def get_width(self):
         return self.width
 
+    @Trace.trace(logger)
     def get_height(self):
         return self.height
 
+    @Trace.trace(logger)
     def get_fps(self):
         return self.fps
 
+    @Trace.trace(logger)
     def start(self):
         self.camera.StartGrabbing(pylon.GrabStrategy_OneByOne)
 
+    @Trace.trace(logger)
     def stop(self):
         self.camera.StopGrabbing()
 
+    @Trace.trace(logger)
     def close(self):
         self.camera.StopGrabbing()
         self.camera.Close()
@@ -51,8 +60,8 @@ class PylonCameraSource(CameraSource):
 
         timestamp = grab_result.GetTimeStamp()
         if timestamp == 0:
-            # The emulated pylon cameras return 0 for timestamp
-            timestamp = None
+            # The emulated pylon cameras (for test purposes only) return 0 for timestamp
+            timestamp = time.time()
         else:
             timestamp = timestamp / 125000000
 
