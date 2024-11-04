@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List, Optional
 
@@ -11,9 +12,13 @@ from app.recording.FPSRenderer import FPSRenderer
 from app.recording.video_pipeline import VideoPipeline
 from app.recording.video_writer import BufferVideoWriter
 from grimace.pose_model import PoseModel
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class TopVideoPipelineBuilder:
+    @Trace.trace(logger)
     def __init__(self):
         self.pose_preview_enabled = False
 
@@ -27,34 +32,42 @@ class TopVideoPipelineBuilder:
 
         self.target_frame_rate: float | None = None
 
+    @Trace.trace(logger)
     def set_pose_preview_enabled(self, pose_preview_enabled: bool) -> 'TopVideoPipelineBuilder':
         self.pose_preview_enabled = pose_preview_enabled
         return self
 
+    @Trace.trace(logger)
     def set_preview_queue(self, preview_queue: IQueue) -> 'TopVideoPipelineBuilder':
         self.preview_queue = preview_queue
         return self
 
+    @Trace.trace(logger)
     def set_video_writer(self, video_writer: BufferVideoWriter) -> 'TopVideoPipelineBuilder':
         self.video_writer = video_writer
         return self
 
+    @Trace.trace(logger)
     def set_pose_estimator_model(self, pose_estimator_model: PoseModel) -> 'TopVideoPipelineBuilder':
         self.pose_estimator_model = pose_estimator_model
         return self
 
+    @Trace.trace(logger)
     def set_pose_results_file(self, pose_results_file: Path) -> 'TopVideoPipelineBuilder':
         self.pose_results_file = pose_results_file
         return self
 
+    @Trace.trace(logger)
     def set_top_pose_keypoints(self, top_pose_keypoints: List[str]) -> 'TopVideoPipelineBuilder':
         self.top_pose_keypoints = top_pose_keypoints
         return self
 
+    @Trace.trace(logger)
     def set_target_frame_rate(self, target_frame_rate: float) -> 'TopVideoPipelineBuilder':
         self.target_frame_rate = target_frame_rate
         return self
 
+    @Trace.trace(logger)
     def build_pose_results_writer(self) -> PoseEstimationResultWriter:
         if self.pose_results_file is None:
             raise ValueError("pose_results_file is not set")
@@ -63,18 +76,21 @@ class TopVideoPipelineBuilder:
 
         return PoseEstimationResultWriter(self.pose_results_file, 1000, self.top_pose_keypoints)
 
+    @Trace.trace(logger)
     def build_pose_estimator(self, output_queue: IQueue, batch_size: int) -> TopPoseEstimatorV1:
         if self.pose_estimator_model is None:
             raise ValueError("pose_estimator_model is not set")
 
         return TopPoseEstimatorV1(self.pose_estimator_model, 1000, output_queue, batch_size)
 
+    @Trace.trace(logger)
     def build_pacer(self, output_queue: IQueue) -> QueuePacer:
         if self.target_frame_rate is None:
             raise ValueError("target_frame_rate is not set")
 
         return QueuePacer(1000, output_queue, rate=self.target_frame_rate)
 
+    @Trace.trace(logger)
     def build(self, preview: bool = False) -> VideoPipeline:
         if self.preview_queue is None:
             raise ValueError("preview_queue is not set")

@@ -1,3 +1,5 @@
+import logging
+import time
 from pathlib import Path
 
 import cv2
@@ -19,9 +21,13 @@ from app.recording.pose_estimator_builder import PoseEstimatorBuilder
 from app.recording.recording_timer import RecordingTimer
 from app.recording.top_video_pipeline_builder import TopVideoPipelineBuilder
 from app.recording.video_writer_builder import VideoWriterBuilder
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class RecordingManager(QObject):
+    @Trace.trace(logger)
     def __init__(self, model: GrimaceRecorderModel):
         super(RecordingManager, self).__init__()
 
@@ -78,20 +84,33 @@ class RecordingManager(QObject):
     def on_timestamp(self, timestamp: float):
         self.model.recording.set_recording_timer_time(timestamp)
 
+    @Trace.trace(logger)
     def apply_top_camera_config(self, config: CameraConfig):
         self.camera_recorder.stop()
         self.camera_recorder.set_top_camera(None)
 
-        camera_source = CameraFactory.create_camera(config)
+        try:
+            camera_source = CameraFactory.create_camera(config)
+        except Exception as e:
+            self.model.recording.set_top_camera_error(str(e))
+            camera_source = None
+
         self.camera_recorder.set_top_camera(camera_source)
 
+    @Trace.trace(logger)
     def apply_front_camera_config(self, config: CameraConfig):
         self.camera_recorder.stop()
         self.camera_recorder.set_front_camera(None)
 
-        camera_source = CameraFactory.create_camera(config)
+        try:
+            camera_source = CameraFactory.create_camera(config)
+        except Exception as e:
+            self.model.recording.set_front_camera_error(str(e))
+            camera_source = None
+
         self.camera_recorder.set_front_camera(camera_source)
 
+    @Trace.trace(logger)
     def _find_max_recording_number(self, target_dir: Path):
         max_recording_number = 0
         for file_type_name, file_type in FILE_TYPES.items():
@@ -101,6 +120,7 @@ class RecordingManager(QObject):
                 max_recording_number = max(max_recording_number, max(numbers))
         return max_recording_number
 
+    @Trace.trace(logger)
     def _update_recording_number(self):
         if self.model.recording.video_files_config.target_directory is None:
             self.model.recording.set_recording_number(1)
@@ -114,12 +134,15 @@ class RecordingManager(QObject):
                 self.model.recording.set_recording_not_ready(f"Error reading target directory: {e}")
                 return
 
+    @Trace.trace(logger)
     def apply_video_files_config(self, config: VideoFilesConfig):
         self._update_recording_number()
 
+    @Trace.trace(logger)
     def apply_recording_config(self, config: RecordingConfig):
         pass
 
+    @Trace.trace(logger)
     def apply_grimace_config(self, config: GrimaceConfig):
         gab = GrimaceAnalyzerBuilder()
         gab.set_model_version(config.grimace_model)
@@ -129,6 +152,7 @@ class RecordingManager(QObject):
         self.front_video_pipeline_builder.set_face_cropper(gab.build_face_cropper())
         self.front_video_pipeline_builder.set_grimace_scorer(gab.build_grimace_scorer())
 
+    @Trace.trace(logger)
     def apply_pose_config(self, config: PoseTopConfig):
         peb = PoseEstimatorBuilder()
         peb.set_model_version(config.pose_model)
@@ -138,42 +162,49 @@ class RecordingManager(QObject):
         self.top_video_pipeline_builder.set_top_pose_keypoints(peb.get_pose_keypoints())
         self.top_video_pipeline_builder.set_pose_preview_enabled(config.show_preview)
 
+    @Trace.trace(logger)
     def on_top_camera_config_changed(self, config: CameraConfig):
         self.model.recording.set_recording_changing_config("Applying Camera Config...")
         self.apply_top_camera_config(config)
         self.model.recording.config_applied_signal.emit()
         self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger)
     def on_front_camera_config_changed(self, config: CameraConfig):
         self.model.recording.set_recording_changing_config("Applying Camera Config...")
         self.apply_front_camera_config(config)
         self.model.recording.config_applied_signal.emit()
         self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger)
     def on_recording_config_changed(self, config: RecordingConfig):
         self.model.recording.set_recording_changing_config("Applying Recording Config...")
         self.apply_recording_config(config)
         self.model.recording.config_applied_signal.emit()
         self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger)
     def on_video_files_config_changed(self, config: VideoFilesConfig):
         self.model.recording.set_recording_changing_config("Applying Video Files Config...")
         self.apply_video_files_config(config)
         self.model.recording.config_applied_signal.emit()
         self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger)
     def on_grimace_config_changed(self, config: GrimaceConfig):
         self.model.recording.set_recording_changing_config("Initializing Grimace Analyzer...")
         self.apply_grimace_config(config)
         self.model.recording.config_applied_signal.emit()
         self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger)
     def on_pose_config_changed(self, config: PoseTopConfig):
         self.model.recording.set_recording_changing_config("Initializing Pose Estimator...")
         self.apply_pose_config(config)
         self.model.recording.config_applied_signal.emit()
         self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger)
     def on_all_config_changed(self, top_camera_config: CameraConfig, front_camera_config: CameraConfig,
                               recording_config: RecordingConfig, video_files_config: VideoFilesConfig,
                               grimace_config: GrimaceConfig, pose_config: PoseTopConfig):
@@ -187,7 +218,8 @@ class RecordingManager(QObject):
         self.model.recording.config_applied_signal.emit()
         self.model.recording.set_recording_idle()
 
-    def on_recording_state_changed(self, recording_state: str):
+    @Trace.trace(logger)
+    def on_recording_state_changed(self, recording_state: str, *_):
         if recording_state == RecordingState.STARTING:
             self.start_recording()
         elif recording_state == RecordingState.STOPPING:
@@ -200,8 +232,12 @@ class RecordingManager(QObject):
             #self.model.recording.config_applied_signal.emit()
             self.check_ready()
 
+    @Trace.trace(logger)
     def start_preview(self):
         self.stop()
+
+        self.camera_recorder.set_top_camera(None)
+        self.camera_recorder.set_front_camera(None)
 
         try:
             top_camera_source = CameraFactory.create_camera(self.model.recording.top_camera_config)
@@ -235,28 +271,25 @@ class RecordingManager(QObject):
         if top_camera_source is not None or front_camera_source is not None:
             self.camera_recorder.start()
 
+    @Trace.trace(logger)
     def stop(self):
-        print("Stopping...")
-
         self.camera_recorder.stop()
         self.camera_recorder.wait()
-        print("A")
 
         if self.top_video_pipeline is not None:
             self.top_video_pipeline.wait()
-            print("B")
             self.top_video_pipeline = None
 
         if self.front_video_pipeline is not None:
             self.front_video_pipeline.wait()
-            print("C")
             self.front_video_pipeline = None
 
-        print("Stopped!")
+        # TODO: This is a hack to prevent the camera from being closed and reopened when starting the recording
+        #  There should be a better way to do this
+        #self.camera_recorder.set_top_camera(None)
+        #self.camera_recorder.set_front_camera(None)
 
-        self.camera_recorder.set_top_camera(None)
-        self.camera_recorder.set_front_camera(None)
-
+    @Trace.trace(logger)
     def prepare_recording(self, top_camera_source, front_camera_source):
         recording_name = self.model.recording.recording_name
         target_directory = Path(self.model.recording.video_files_config.target_directory)
@@ -306,29 +339,31 @@ class RecordingManager(QObject):
         self.front_video_pipeline_builder.set_video_writer(front_vwb.build())
         self.front_video_pipeline_builder.set_grimace_results_file(grimace_results_file)
 
+    @Trace.trace(logger)
     def start_recording(self):
         self.stop()
 
-        top_camera_source = CameraFactory.create_camera(self.model.recording.top_camera_config)
-        front_camera_source = CameraFactory.create_camera(self.model.recording.front_camera_config)
+        #top_camera_source = CameraFactory.create_camera(self.model.recording.top_camera_config)
+        #front_camera_source = CameraFactory.create_camera(self.model.recording.front_camera_config)
 
-        if top_camera_source is None or front_camera_source is None:
+        #if top_camera_source is None or front_camera_source is None:
+        #    raise ValueError("Both cameras must be set to start recording")
+
+        if self.camera_recorder.top_camera is None or self.camera_recorder.front_camera is None:
             raise ValueError("Both cameras must be set to start recording")
 
-        self.prepare_recording(top_camera_source, front_camera_source)
+        self.prepare_recording(self.camera_recorder.top_camera.source, self.camera_recorder.front_camera.source)
 
-        self.top_video_pipeline_builder.set_target_frame_rate(front_camera_source.get_fps())
+        self.top_video_pipeline_builder.set_target_frame_rate(self.camera_recorder.top_camera.source.get_fps())
         self.top_video_pipeline = self.top_video_pipeline_builder.build()
         recording_duration = self.model.recording.recording_config.duration if self.model.recording.recording_config.mode == "Timed" else None
         self.recording_timer = RecordingTimer(self.top_video_pipeline.input_queue, recording_duration)
         self.recording_timer.time_signal.connect(self.on_timestamp)
         self.recording_timer.stop_signal.connect(self.model.recording.set_recording_stopping)
 
-        self.camera_recorder.set_top_camera(top_camera_source)
-        self.camera_recorder.top_camera.set_video_buffer(self.recording_timer)
-
         self.front_video_pipeline = self.front_video_pipeline_builder.build()
-        self.camera_recorder.set_front_camera(front_camera_source)
+
+        self.camera_recorder.top_camera.set_video_buffer(self.recording_timer)
         self.camera_recorder.front_camera.set_video_buffer(self.front_video_pipeline.input_queue)
 
         self.top_video_pipeline.core_error_signal.connect(self.on_recording_error)
@@ -345,12 +380,14 @@ class RecordingManager(QObject):
 
         self.model.recording.set_recording_running()
 
+    @Trace.trace(logger)
     def stop_recording(self):
         self.stop()
         self.model.recording.set_recording_name(None)
         self._update_recording_number()
         self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger)
     def is_ready(self) -> str | None:
         if self.camera_recorder.top_camera is None:
             return "Top camera not properly configured"
@@ -359,6 +396,7 @@ class RecordingManager(QObject):
         if self.model.recording.video_files_config.target_directory is None:
             return "Target directory not selected"
 
+    @Trace.trace(logger)
     def check_ready(self):
         reason = self.is_ready()
         if reason is None:
@@ -366,11 +404,12 @@ class RecordingManager(QObject):
         else:
             self.model.recording.set_recording_not_ready(reason)
 
+    @Trace.trace(logger, level=logging.WARNING)
     def recording_error(self, error: str):
-        print("Recording error:", error)
         self.model.recording.set_recording_error(error)
         self.model.recording.set_recording_stopping()
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_camera_error(self, error: str):
         if error is None:
             return
@@ -381,6 +420,7 @@ class RecordingManager(QObject):
             self.stop()
             self.model.recording.set_recording_idle()
 
+    @Trace.trace(logger, level=logging.WARNING)
     def on_recording_error(self, error: str):
         if error is None:
             return

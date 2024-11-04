@@ -1,6 +1,11 @@
+import logging
+
 from PySide6.QtCore import QObject, Signal
 
 from app.dataflow.qqueue import IQueue
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class RecordingTimerMeta(type(QObject), type(IQueue)):
@@ -14,6 +19,7 @@ class RecordingTimer(QObject, IQueue, metaclass=RecordingTimerMeta):
     stop_signal = Signal()
     time_signal = Signal(float)
 
+    @Trace.trace(logger)
     def __init__(self, output_queue: IQueue, duration: float = None):
         super().__init__()
 
@@ -43,6 +49,7 @@ class RecordingTimer(QObject, IQueue, metaclass=RecordingTimerMeta):
 
         return True
 
+    @Trace.trace(logger)
     def start(self):
         self.started = True
         self.finished = False
@@ -50,6 +57,7 @@ class RecordingTimer(QObject, IQueue, metaclass=RecordingTimerMeta):
         self.latest_time = None
         self.stop_time = None
 
+    @Trace.trace(logger)
     def stop(self):
         if self.finished or not self.started:
             return
@@ -58,6 +66,7 @@ class RecordingTimer(QObject, IQueue, metaclass=RecordingTimerMeta):
         self.stop_time = self.latest_time
         self.stop_signal.emit()
 
+    @Trace.trace(logger)
     def cancel(self):
         if self.finished or not self.started:
             return
@@ -79,6 +88,7 @@ class RecordingTimer(QObject, IQueue, metaclass=RecordingTimerMeta):
         if self._should_stop():
             self.stop()
 
+    @Trace.trace(logger)
     def close(self):
         # If the timer, being an IQueue, is closed, it should stop counting time and
         # propagate the close command to the output queue.

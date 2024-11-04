@@ -1,6 +1,10 @@
+import logging
 from datetime import timedelta
 
 from app.model.grimace_recorder_model import GrimaceRecorderModel, RecordingState
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 OVERVIEW_TEMPLATE = """
 ## Overview for {recording_state}:  
@@ -31,7 +35,8 @@ class OverviewRenderer:
         self.model.ask_for_identifier_signal.connect(self.render)
         self.render()
 
-    def render(self):
+    @Trace.trace(logger)
+    def render(self, *_):
         if self.model.recording.recording_state in [RecordingState.RECORDING, RecordingState.STOPPING]:
             recording_state = "Current Recording"
         else:

@@ -1,4 +1,9 @@
+import logging
 from dataclasses import dataclass
+
+from util.trace import Trace
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 @dataclass(frozen=True)
@@ -23,6 +28,7 @@ class FileBuilder:
         self.prefix = prefix
         self.recording_number = recording_number
 
+    @Trace.trace(logger)
     def build(self, file_type_name: str) -> str:
         file_type = FILE_TYPES.get(file_type_name)
         if file_type is None:

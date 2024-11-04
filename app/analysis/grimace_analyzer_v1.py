@@ -11,7 +11,7 @@ import logging
 
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.grimace_analyzer")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class GrimaceAnalyzerV1(QueueProcess):

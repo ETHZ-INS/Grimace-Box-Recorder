@@ -9,6 +9,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QDialog, QFileDialog, QDialogButtonBox
 
 from app.config.camera import CameraConfig
+from app.config.hard_config import load_camera_ids
 from app.layout.configure_camera_dialog import Ui_DConfigureCamera
 
 import logging
@@ -17,13 +18,7 @@ from app.model.devices import Devices
 from app.model.grimace_recorder_model import GrimaceRecorderModel
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.configure_camera_dialog")
-
-bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
-camera_config_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'camera_config')))
-
-top_camera_config_file = camera_config_folder / "top.pfs"
-front_camera_config_file = camera_config_folder / "front.pfs"
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class ConfigureCamera(Ui_DConfigureCamera, QDialog):
@@ -36,13 +31,6 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
         self.camera = camera
 
         self.temp_config = deepcopy(model.recording.top_camera_config if camera == "top" else model.recording.front_camera_config)
-
-        if camera == "top":
-            self.setWindowTitle("Configure Top Camera")
-            self.temp_config.config_file = str(top_camera_config_file)
-        else:
-            self.setWindowTitle("Configure Front Camera")
-            self.temp_config.config_file = str(front_camera_config_file)
 
         # Video File instead of a camera is only available in debug mode
         debug_mode = model.debug_mode
@@ -61,9 +49,16 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
             self.stk_camera.setCurrentIndex(-1)
 
         available_cameras = Devices.get_available_cameras()
+
+        hard_top_camera_id, hard_front_camera_id = load_camera_ids()
+        hard_camera_id = hard_top_camera_id if camera == "top" else hard_front_camera_id
         cameras_in_use = [model.recording.front_camera_config.camera_id if camera == "top" else model.recording.top_camera_config.camera_id]
 
-        available_cameras = [camera for camera in available_cameras if camera not in cameras_in_use]
+        if hard_camera_id is None or debug_mode:
+            available_cameras = [camera for camera in available_cameras if camera not in cameras_in_use]
+        else:
+            available_cameras = [camera for camera in available_cameras if camera == hard_camera_id]
+            self.dpd_camera.setEnabled(False)
 
         self.dpd_camera.clear()
         self.dpd_camera.addItems([None] + available_cameras)  # Add None to allow the user to unselect the camera
@@ -91,7 +86,6 @@ class ConfigureCamera(Ui_DConfigureCamera, QDialog):
         if camera_type == "Pylon":
             self.stk_camera.setCurrentIndex(0)
         elif camera_type == "Video File":
-            print("Switching layout")
             self.stk_camera.setCurrentIndex(1)
 
     @Trace.trace(logger)

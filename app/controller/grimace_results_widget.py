@@ -18,7 +18,7 @@ import logging
 from app.model.grimace_recorder_model import GrimaceRecorderModel
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.grimace_results_widget")
+logger = logging.getLogger("grimace_box."+__name__)
 
 bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
 res_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'res')))

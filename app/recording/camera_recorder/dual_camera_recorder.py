@@ -18,7 +18,7 @@ import logging
 from grimace.camera_identifier import CameraIdentifier
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.recording.dual_video_recorder")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 def build_pylon_camera_source(config: CameraConfig):
@@ -283,12 +283,10 @@ class DualCameraRecorder(QThread):
         if top_camera is not None:
             top_camera.source.stop()
             if top_camera.video_buffer is not None:
-                print("Closing top camera video buffer")
                 top_camera.video_buffer.close()
         if front_camera is not None:
             front_camera.source.stop()
             if front_camera.video_buffer is not None:
-                print("Closing front camera video buffer")
                 front_camera.video_buffer.close()
 
     def check_health(self):

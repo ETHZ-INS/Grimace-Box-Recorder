@@ -7,7 +7,7 @@ from app.layout.recording_name_dialog import Ui_DRecordingName
 from app.model.grimace_recorder_model import GrimaceRecorderModel
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.configure_recording_name_dialog")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 PREVIEW_FILES = [

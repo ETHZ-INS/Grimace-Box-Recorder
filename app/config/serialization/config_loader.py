@@ -10,18 +10,20 @@ from app.validation.config.camera_config_validator import CameraConfigValidator
 from app.validation.config.grimace_config_validator import GrimaceConfigValidator
 from app.validation.config.recording_config_validator import RecordingConfigValidator
 from app.validation.config.video_files_validator import VideoFilesConfigValidator
+from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.config.serialization.config_loader")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class ConfigLoader(QObject):
+    @Trace.trace(logger)
     def __init__(self, model: GrimaceRecorderModel):
         super(ConfigLoader, self).__init__()
 
         self.model = model
 
         self.model.loading_signal.connect(self.on_loading)
-        self.model.recording.config_applied_signal.connect(self.on_config_applied)
+        self.model.recording.recording_state_signal.connect(self.on_state_changed)
 
         self.loading = False
 
@@ -29,18 +31,20 @@ class ConfigLoader(QObject):
         self.moveToThread(self.thread)
         self.thread.start()
 
+    @Trace.trace(logger)
     def on_loading(self, loading: bool):
         if loading and self.model.config_file is not None:
             self.loading = True
             self.load(Path(self.model.config_file))
 
-    def on_config_applied(self):
-        if self.loading:
+    @Trace.trace(logger)
+    def on_state_changed(self, recording_state: RecordingState, *_):
+        if self.loading and recording_state in [RecordingState.READY, RecordingState.NOT_READY]:
             self.model.progress_dialog.finish()
             self.loading = False
 
+    @Trace.trace(logger)
     def load(self, path: Path):
-        print("Loading configuration file")
         self.model.progress_dialog.start("Loading Configuration", "Loading Configuration File...")
 
         try:
@@ -109,6 +113,7 @@ class ConfigLoader(QObject):
 
         self.model.set_loading(False)
 
+    @Trace.trace(logger)
     def save(self, path: Path):
         config = (
             self.model.recording.top_camera_config,

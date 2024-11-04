@@ -10,7 +10,7 @@ from app.model.devices import Devices
 from app.model.grimace_recorder_model import GrimaceRecorderModel
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.configure_grimace_scoring_dialog")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class ConfigureGrimaceAnalysis(Ui_DConfigureGrimaceScoring, QDialog):

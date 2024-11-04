@@ -367,7 +367,7 @@ Front Video Filename: front_1.avi
 font: 700 16pt &quot;Segoe UI&quot;;</string>
             </property>
             <property name="text">
-             <string>Debug Mode</string>
+             <string>SU Mode</string>
             </property>
             <property name="scaledContents">
              <bool>false</bool>
@@ -510,6 +510,9 @@ font: 700 16pt &quot;Segoe UI&quot;;</string>
          </property>
          <property name="text">
           <string>Ready to record</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::MarkdownText</enum>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>

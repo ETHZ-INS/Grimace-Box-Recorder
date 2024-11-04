@@ -4,7 +4,7 @@ from typing import Optional
 
 @dataclass
 class PoseTopConfig:
-    show_preview: bool = True
+    show_preview: bool = False
     pose_model: Optional[str] = "V1 - GrimaceBoxTop"
     pose_device: str = "cuda:0"
 

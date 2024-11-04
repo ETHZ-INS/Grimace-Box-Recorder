@@ -21,6 +21,6 @@ pyinstaller^
  --add-data "res/grimace_legend.drawio.png;./res"^
  --onedir^
  --noconsole^
- --name "Grimace Box"^
+ --name "GrimAce"^
  --icon "res/logo.ico"^
  main.py -y

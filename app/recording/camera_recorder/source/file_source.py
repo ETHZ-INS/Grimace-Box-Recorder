@@ -7,10 +7,11 @@ import numpy as np
 from app.recording.camera_recorder.source.base_source import CameraSource
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.recording.camera_recorder.source.file_source")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class FileCameraSource(CameraSource):
+    @Trace.trace(logger)
     def __init__(self, video_file: str):
         self.video_file = video_file
         self.vc = cv2.VideoCapture(video_file)

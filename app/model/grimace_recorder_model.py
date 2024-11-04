@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 from enum import Enum
 
@@ -10,6 +11,10 @@ from app.config.pose_top import PoseTopConfig
 from app.config.recording import RecordingConfig
 from app.config.video_files import VideoFilesConfig
 from app.dataflow.qlist import QList
+from util.trace import Trace
+
+
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class RecordingState(Enum):
@@ -41,6 +46,7 @@ class ProgressDialogState(Enum):
 class MessageBoxModel(QObject):
     change_signal = Signal(MessageBoxState, object, object)
 
+    @Trace.trace(logger)
     def __init__(self):
         super(MessageBoxModel, self).__init__()
 
@@ -48,12 +54,14 @@ class MessageBoxModel(QObject):
         self.title: str = ""
         self.text: str = ""
 
+    @Trace.trace(logger)
     def show(self, title: str, text: str):
         self.state = MessageBoxState.VISIBLE
         self.title = title
         self.text = text
         self.change_signal.emit(MessageBoxState.VISIBLE, title, text)
 
+    @Trace.trace(logger)
     def hide(self):
         self.state = MessageBoxState.HIDDEN
         self.title = ""
@@ -65,6 +73,7 @@ class ProgressDialogModel(QObject):
     change_signal = Signal(ProgressDialogState, object, object, int)
     progress_signal = Signal(object, int)
 
+    @Trace.trace(logger)
     def __init__(self):
         super(ProgressDialogModel, self).__init__()
 
@@ -73,6 +82,7 @@ class ProgressDialogModel(QObject):
         self.text: str = ""
         self.progress: int = 0
 
+    @Trace.trace(logger)
     def start(self, title: str, text: str, progress: int = 0):
         self.state = ProgressDialogState.RUNNING
         self.title = title
@@ -80,6 +90,7 @@ class ProgressDialogModel(QObject):
         self.progress = progress
         self.change_signal.emit(ProgressDialogState.RUNNING, title, text, progress)
 
+    @Trace.trace(logger)
     def finish(self):
         self.state = ProgressDialogState.FINISHED
         self.title = ""
@@ -87,6 +98,7 @@ class ProgressDialogModel(QObject):
         self.progress = 0
         self.change_signal.emit(ProgressDialogState.FINISHED, "", "", 0)
 
+    @Trace.trace(logger)
     def set_progress(self, text: str, progress: int):
         self.text = text
         self.progress = progress
@@ -118,6 +130,7 @@ class RecordingModel(QObject):
     front_camera_error_signal = Signal(object)
     recording_error_signal = Signal(object)
 
+    @Trace.trace(logger)
     def __init__(self):
         super(RecordingModel, self).__init__()
 
@@ -144,38 +157,39 @@ class RecordingModel(QObject):
         self.grimace_analyzer_initialized = False
         self.pose_estimator_initialized = False
 
+    @Trace.trace(logger)
     def set_top_camera_config(self, top_camera_config: CameraConfig):
-        print("set_top_camera_config", top_camera_config)
         self.top_camera_config = deepcopy(top_camera_config)
         self.top_camera_config_signal.emit(top_camera_config)
         self.set_top_camera_error(None)
 
+    @Trace.trace(logger)
     def set_front_camera_config(self, front_camera_config: CameraConfig):
-        print("set_front_camera_config", front_camera_config)
         self.front_camera_config = deepcopy(front_camera_config)
         self.front_camera_config_signal.emit(front_camera_config)
         self.set_front_camera_error(None)
 
+    @Trace.trace(logger)
     def set_video_files_config(self, video_files_config: VideoFilesConfig):
-        print("set_video_files_config", video_files_config)
         self.video_files_config = deepcopy(video_files_config)
         self.video_files_config_signal.emit(video_files_config)
 
+    @Trace.trace(logger)
     def set_recording_config(self, recording_config: RecordingConfig):
-        print("set_recording_config", recording_config)
         self.recording_config = deepcopy(recording_config)
         self.recording_config_signal.emit(recording_config)
 
+    @Trace.trace(logger)
     def set_grimace_config(self, grimace_config: GrimaceConfig):
-        print("set_grimace_config", grimace_config)
         self.grimace_config = deepcopy(grimace_config)
         self.grimace_config_signal.emit(grimace_config)
 
+    @Trace.trace(logger)
     def set_pose_config(self, pose_config: PoseTopConfig):
-        print("set_pose_config", pose_config)
         self.pose_config = deepcopy(pose_config)
         self.pose_config_signal.emit(pose_config)
 
+    @Trace.trace(logger)
     def set_all_configs(self, top_camera_config: CameraConfig, front_camera_config: CameraConfig,
                         video_files_config: VideoFilesConfig, recording_config: RecordingConfig,
                         grimace_config: GrimaceConfig, pose_config: PoseTopConfig):
@@ -188,43 +202,51 @@ class RecordingModel(QObject):
         self.all_configs_signal.emit(top_camera_config, front_camera_config, video_files_config,
                                      recording_config, grimace_config, pose_config)
 
+    @Trace.trace(logger)
     def apply_all_configs(self):
         # This is just used at the start of the application to apply the default configuration
         self.all_configs_signal.emit(self.top_camera_config, self.front_camera_config, self.video_files_config,
                                         self.recording_config, self.grimace_config, self.pose_config)
 
+    @Trace.trace(logger)
     def set_recording_number(self, recording_number: int):
         self.recording_number = recording_number
         self.recording_number_signal.emit(recording_number)
 
+    @Trace.trace(logger)
     def set_recording_name(self, recording_name: str | None):
         self.recording_name = recording_name
         self.recording_name_signal.emit(recording_name)
 
+    @Trace.trace(logger)
     def set_recording_idle(self):
         print("IDLE: ", self.recording_state_reason)
         self.recording_state = RecordingState.IDLE
         self.recording_state_reason = None
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    @Trace.trace(logger)
     def set_recording_ready(self):
         print("READY: ", self.recording_state_reason)
         self.recording_state = RecordingState.READY
         self.recording_state_reason = None
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    @Trace.trace(logger)
     def set_recording_not_ready(self, reason: str):
         print("NOT READY: ", reason)
         self.recording_state = RecordingState.NOT_READY
         self.recording_state_reason = reason
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    @Trace.trace(logger)
     def set_recording_changing_config(self, reason: str):
         print("CHANGING CONFIG: ", reason)
         self.recording_state = RecordingState.CHANGING_CONFIG
         self.recording_state_reason = reason
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    @Trace.trace(logger)
     def set_recording_starting(self):
         print("STARTING: ", self.recording_state_reason)
         # This transitioning state tells the recording manager that it should start the recording
@@ -233,12 +255,14 @@ class RecordingModel(QObject):
         self.recording_error = None
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    @Trace.trace(logger)
     def set_recording_running(self):
         print("RECORDING: ", self.recording_state_reason)
         self.recording_state = RecordingState.RECORDING
         self.recording_state_reason = None
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    @Trace.trace(logger)
     def set_recording_stopping(self):
         print("STOPPING: ", self.recording_state_reason)
         # This transitioning state tells the recording manager that it should stop the recording
@@ -246,20 +270,24 @@ class RecordingModel(QObject):
         self.recording_state_reason = None
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    @Trace.trace(logger)
     def set_top_camera_error(self, top_camera_error: str | None):
         self.top_camera_error = top_camera_error
         self.top_camera_error_signal.emit(top_camera_error)
 
+    @Trace.trace(logger)
     def set_front_camera_error(self, front_camera_error: str | None):
         self.front_camera_error = front_camera_error
         self.front_camera_error_signal.emit(front_camera_error)
 
+    @Trace.trace(logger)
     def set_recording_error(self, error: str | None):
         self.recording_error = error
         # TODO: What will happen if an error occurs during state STARTING or STOPPING? Will the recording manager
         #  try to start or stop the recording again?
         self.recording_state_signal.emit(self.recording_state, self.recording_state_reason, self.recording_error)
 
+    # No trace because it's called too often
     def set_recording_timer_time(self, recording_time: float):
         self.recording_timer_time = recording_time
         self.recording_timer_time_signal.emit(recording_time)
@@ -284,6 +312,7 @@ class GrimaceRecorderModel(QObject):
     overview_text_signal = Signal(str)
     warnings_text_signal = Signal(str)
 
+    @Trace.trace(logger)
     def __init__(self):
         super(GrimaceRecorderModel, self).__init__()
 
@@ -308,37 +337,46 @@ class GrimaceRecorderModel(QObject):
         self.message_box = MessageBoxModel()
         self.progress_dialog = ProgressDialogModel()
 
+    @Trace.trace(logger)
     def set_debug_mode(self, debug_mode: bool):
         self.debug_mode = debug_mode
         self.debug_mode_signal.emit(debug_mode)
 
+    @Trace.trace(logger)
     def set_config_file(self, config_file: str):
         self.config_file = config_file
 
+    @Trace.trace(logger)
     def set_ask_for_identifier(self, ask_for_identifier: bool):
         self.ask_for_identifier = ask_for_identifier
         self.ask_for_identifier_signal.emit(ask_for_identifier)
 
+    @Trace.trace(logger)
     def set_loading(self, loading: bool):
         self.loading = loading
         self.loading_signal.emit(loading)
 
+    @Trace.trace(logger)
     def set_application_closing(self):
         self.application_state = ApplicationState.CLOSING
         self.application_state_signal.emit(self.application_state)
 
+    # No trace because it's called too often
     def set_top_camera_frame(self, top_camera_frame):
         self.top_camera_frame = top_camera_frame
         self.top_camera_frame_signal.emit(top_camera_frame)
 
+    # No trace because it's called too often
     def set_front_camera_frame(self, front_camera_frame):
         self.front_camera_frame = front_camera_frame
         self.front_camera_frame_signal.emit(front_camera_frame)
 
+    @Trace.trace(logger)
     def set_overview_text(self, overview_text: str):
         self.overview_text = overview_text
         self.overview_text_signal.emit(overview_text)
 
+    @Trace.trace(logger)
     def set_warnings_text(self, warnings_text: str):
         self.warnings_text = warnings_text
         self.warnings_text_signal.emit(warnings_text)

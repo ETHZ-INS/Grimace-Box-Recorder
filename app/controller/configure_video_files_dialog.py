@@ -10,7 +10,7 @@ import logging
 
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.configure_video_files_dialog")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class ConfigureVideoFiles(Ui_DConfigureVideoFiles, QDialog):

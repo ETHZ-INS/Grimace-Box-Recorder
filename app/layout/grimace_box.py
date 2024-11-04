@@ -335,7 +335,7 @@ class Ui_WGrimaceBox(object):
     # setupUi
 
     def retranslateUi(self, WGrimaceBox):
-        WGrimaceBox.setWindowTitle(QCoreApplication.translate("WGrimaceBox", u"Grimace Box", None))
+        WGrimaceBox.setWindowTitle(QCoreApplication.translate("WGrimaceBox", u"GrimAce", None))
         self.action_save_project.setText(QCoreApplication.translate("WGrimaceBox", u"Save Project", None))
 #if QT_CONFIG(tooltip)
         self.action_save_project.setToolTip(QCoreApplication.translate("WGrimaceBox", u"Save project configuration (cameras, settings, etc.) to a file for later use", None))

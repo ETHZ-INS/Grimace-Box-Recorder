@@ -39,7 +39,7 @@ import logging
 from grimace.pose_model import PoseModel
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.recording.recording_manager")
+logger = logging.getLogger("grimace_box."+__name__)
 
 bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
 models_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'models')))
@@ -291,7 +291,6 @@ class RecordingBuilder(QObject):
     def configure_recording(self, recording_config: RecordingConfig):
         self.recording_config = deepcopy(recording_config)
         fourcc = cv2.VideoWriter.fourcc(*recording_config.codec)
-        print(fourcc)
         self.top_video_writer_builder.set_fourcc(fourcc)
         self.front_video_writer_builder.set_fourcc(fourcc)
         return self
