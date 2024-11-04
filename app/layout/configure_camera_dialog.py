@@ -16,23 +16,23 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
-    QDialogButtonBox, QDoubleSpinBox, QFormLayout, QFrame,
-    QHBoxLayout, QLabel, QLayout, QSizePolicy,
-    QStackedWidget, QToolButton, QVBoxLayout, QWidget)
+    QDialogButtonBox, QFormLayout, QFrame, QHBoxLayout,
+    QLabel, QLayout, QSizePolicy, QStackedWidget,
+    QToolButton, QVBoxLayout, QWidget)
 
 class Ui_DConfigureCamera(object):
     def setupUi(self, DConfigureCamera):
         if not DConfigureCamera.objectName():
             DConfigureCamera.setObjectName(u"DConfigureCamera")
         DConfigureCamera.setWindowModality(Qt.NonModal)
-        DConfigureCamera.resize(400, 260)
+        DConfigureCamera.resize(400, 160)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(DConfigureCamera.sizePolicy().hasHeightForWidth())
         DConfigureCamera.setSizePolicy(sizePolicy)
-        DConfigureCamera.setMinimumSize(QSize(400, 260))
-        DConfigureCamera.setMaximumSize(QSize(800, 260))
+        DConfigureCamera.setMinimumSize(QSize(400, 160))
+        DConfigureCamera.setMaximumSize(QSize(800, 160))
         self.verticalLayout = QVBoxLayout(DConfigureCamera)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setSizeConstraint(QLayout.SetMinAndMaxSize)
@@ -88,44 +88,6 @@ class Ui_DConfigureCamera(object):
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.dpd_camera)
 
-        self.label_3 = QLabel(self.frame)
-        self.label_3.setObjectName(u"label_3")
-        self.label_3.setMinimumSize(QSize(0, 44))
-
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_3)
-
-        self.frame_2 = QFrame(self.frame)
-        self.frame_2.setObjectName(u"frame_2")
-        self.frame_2.setFrameShape(QFrame.StyledPanel)
-        self.frame_2.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout = QHBoxLayout(self.frame_2)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.lbl_selected_config_file = QLabel(self.frame_2)
-        self.lbl_selected_config_file.setObjectName(u"lbl_selected_config_file")
-
-        self.horizontalLayout.addWidget(self.lbl_selected_config_file)
-
-        self.btn_select_config_file = QToolButton(self.frame_2)
-        self.btn_select_config_file.setObjectName(u"btn_select_config_file")
-
-        self.horizontalLayout.addWidget(self.btn_select_config_file)
-
-
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.frame_2)
-
-        self.spb_fps = QDoubleSpinBox(self.frame)
-        self.spb_fps.setObjectName(u"spb_fps")
-        self.spb_fps.setMinimum(4.000000000000000)
-        self.spb_fps.setMaximum(60.000000000000000)
-        self.spb_fps.setValue(30.000000000000000)
-
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.spb_fps)
-
-        self.label_2 = QLabel(self.frame)
-        self.label_2.setObjectName(u"label_2")
-
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_2)
-
 
         self.verticalLayout_2.addWidget(self.frame)
 
@@ -175,6 +137,7 @@ class Ui_DConfigureCamera(object):
 
         self.btnbox_buttons = QDialogButtonBox(DConfigureCamera)
         self.btnbox_buttons.setObjectName(u"btnbox_buttons")
+        self.btnbox_buttons.setMinimumSize(QSize(0, 0))
         self.btnbox_buttons.setOrientation(Qt.Horizontal)
         self.btnbox_buttons.setStandardButtons(QDialogButtonBox.Apply|QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
 
@@ -185,7 +148,7 @@ class Ui_DConfigureCamera(object):
         self.btnbox_buttons.accepted.connect(DConfigureCamera.accept)
         self.btnbox_buttons.rejected.connect(DConfigureCamera.reject)
 
-        self.stk_camera.setCurrentIndex(0)
+        self.stk_camera.setCurrentIndex(1)
         self.dpd_camera.setCurrentIndex(-1)
 
 
@@ -203,12 +166,6 @@ class Ui_DConfigureCamera(object):
         self.dpd_camera.setItemText(1, QCoreApplication.translate("DConfigureCamera", u"2345352", None))
 
         self.dpd_camera.setCurrentText("")
-        self.label_3.setText(QCoreApplication.translate("DConfigureCamera", u"Config File:", None))
-        self.lbl_selected_config_file.setText(QCoreApplication.translate("DConfigureCamera", u"No File Selected", None))
-        self.btn_select_config_file.setText(QCoreApplication.translate("DConfigureCamera", u"...", None))
-        self.spb_fps.setPrefix("")
-        self.spb_fps.setSuffix("")
-        self.label_2.setText(QCoreApplication.translate("DConfigureCamera", u"FPS:", None))
         self.label_5.setText(QCoreApplication.translate("DConfigureCamera", u"Video File:", None))
         self.lbl_selected_video_file.setText(QCoreApplication.translate("DConfigureCamera", u"No File Selected", None))
         self.btn_select_video_file.setText(QCoreApplication.translate("DConfigureCamera", u"...", None))

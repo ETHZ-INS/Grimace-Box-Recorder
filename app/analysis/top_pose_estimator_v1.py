@@ -8,7 +8,7 @@ import logging
 from grimace.pose_model import PoseModel
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.top_pose_estimator")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class TopPoseEstimatorV1(QueueProcess):

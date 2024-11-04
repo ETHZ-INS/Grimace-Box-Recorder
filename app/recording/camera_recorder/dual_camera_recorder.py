@@ -1,3 +1,4 @@
+import random
 import time
 from typing import Optional
 
@@ -17,7 +18,7 @@ import logging
 from grimace.camera_identifier import CameraIdentifier
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.recording.dual_video_recorder")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 def build_pylon_camera_source(config: CameraConfig):
@@ -85,7 +86,7 @@ class DualCameraRecorder(QThread):
             self.dropped_frames = 0
             self.buffer_fill_level = 0.0
 
-            self.camera_identifier_scores = []
+            #self.camera_identifier_scores = []
 
             # TODO: This is a temporary solution
             self.target_fps = 30.0
@@ -130,10 +131,10 @@ class DualCameraRecorder(QThread):
             self.source.close()
 
     @Trace.trace(logger)
-    def __init__(self, camera_identifier: CameraIdentifier):
+    def __init__(self):#, camera_identifier: CameraIdentifier):
         super(DualCameraRecorder, self).__init__()
 
-        self.camera_identifier = camera_identifier
+        #self.camera_identifier = camera_identifier
 
         self.top_camera: Optional[DualCameraRecorder.Camera] = None
         self.front_camera: Optional[DualCameraRecorder.Camera] = None
@@ -143,14 +144,14 @@ class DualCameraRecorder(QThread):
         self.running = False
 
     @Trace.trace(logger)
-    def set_top_camera(self, source: CameraSource | None, start: bool = True):
+    def set_top_camera(self, source: CameraSource | None):
         if self.running:
             raise Exception("Cannot change camera source while recorder is running")
-            #self.stop()
-            #self.wait()
 
         # TODO: Now that i open the camera before setting the source, there's an error if i try to use the same camera
         #  Temp solution is to first set the source to None, then set the new source
+        #  Maybe make a close method that closes the camera and sets the source to None
+        #  so the caller has the responsibility to close the camera before setting a new source
         if self.top_camera is not None:
             self.top_camera.close()
             self.top_camera = None
@@ -158,15 +159,10 @@ class DualCameraRecorder(QThread):
         if source is not None:
             self.top_camera = DualCameraRecorder.Camera(source)
 
-        #if start:
-        #    self.start()
-
     @Trace.trace(logger)
-    def set_front_camera(self, source: CameraSource | None, start: bool = True):
+    def set_front_camera(self, source: CameraSource | None):
         if self.running:
             raise Exception("Cannot change camera source while recorder is running")
-            #self.stop()
-            #self.wait()
 
         if self.front_camera is not None:
             self.front_camera.close()
@@ -175,20 +171,17 @@ class DualCameraRecorder(QThread):
         if source is not None:
             self.front_camera = DualCameraRecorder.Camera(source)
 
-        #if start:
-        #    self.start()
-
     @Trace.trace(logger)
-    def set_recording_context(self, recording_context: RecordingContext):
+    def set_recording_context(self, recording_context: RecordingContext | None):
         self.recording_context = recording_context
 
     def handle_frame(self, camera: Camera, frame: np.ndarray, timestamp: float):
         if camera.timestamp_offset is None:
             camera.set_timestamp_offset(timestamp)
 
-        # TODO: This is a temporary solution
-        if len(camera.camera_identifier_scores) < 10 and camera.frame_index % 30 == 0:
-            camera.camera_identifier_scores.append(self.camera_identifier.score(frame))
+        ## TODO: This is a temporary solution
+        #if len(camera.camera_identifier_scores) < 10 and camera.frame_index % 30 == 0:
+        #    camera.camera_identifier_scores.append(self.camera_identifier.score(frame))
 
         normalized_timestamp = timestamp - camera.timestamp_offset
 
@@ -254,6 +247,8 @@ class DualCameraRecorder(QThread):
             if top_camera is not None:
                 try:
                     ret, frame_number, timestamp, frame = self.top_camera.source.grab_frame()
+                    #if random.random() < 0.001:
+                    #    raise Exception("Random error")
                     if ret:
                         self.handle_frame(top_camera, frame, timestamp)
                         any_frames = True
@@ -261,9 +256,9 @@ class DualCameraRecorder(QThread):
                     break
                 except Exception as e:
                     logger.exception("Error grabbing frame from top camera")
-                    top_camera.close()
-                    top_camera = None
                     self.top_error_signal.emit(str(e))
+                    #self.front_error_signal.emit(str(e))
+                    break
 
             if front_camera is not None:
                 try:
@@ -275,9 +270,9 @@ class DualCameraRecorder(QThread):
                     break
                 except Exception as e:
                     logger.exception("Error grabbing frame from front camera")
-                    front_camera.close()
-                    front_camera = None
                     self.front_error_signal.emit(str(e))
+                    #self.top_error_signal.emit(str(e))
+                    break
 
             if not any_frames:
                 # No frames were grabbed, sleep for a short time
@@ -322,15 +317,15 @@ class DualCameraRecorder(QThread):
                 warning = f"{name.capitalize()} camera dropped {camera.dropped_frames} frames"
             report["warnings"][f"{name}_camera_dropped_frames"] = warning
 
-        if top_camera is not None and front_camera is not None:
-            top_mean_identifier = np.mean(top_camera.camera_identifier_scores)
-            front_mean_identifier = np.mean(front_camera.camera_identifier_scores)
-            warning = None
-            # The camera identifier score should be close to 1 for the front camera and close to 0 for the top camera
-            # If the mean identifier score is higher for the top camera, the cameras are likely switched
-            if top_mean_identifier > front_mean_identifier:
-                warning = "Top and front camera are likely switched. Make sure you have selected the correct devices"
-            report["warnings"]["cameras_switched"] = warning
+        #if top_camera is not None and front_camera is not None:
+        #    top_mean_identifier = np.mean(top_camera.camera_identifier_scores)
+        #    front_mean_identifier = np.mean(front_camera.camera_identifier_scores)
+        #    warning = None
+        #    # The camera identifier score should be close to 1 for the front camera and close to 0 for the top camera
+        #    # If the mean identifier score is higher for the top camera, the cameras are likely switched
+        #    if top_mean_identifier > front_mean_identifier:
+        #        warning = "Top and front camera are likely switched. Make sure you have selected the correct devices"
+        #    report["warnings"]["cameras_switched"] = warning
 
         return report
 

@@ -10,7 +10,7 @@ import logging
 from grimace.pose_model import PoseInstance
 from util.trace import Trace
 
-logger = logging.getLogger("grimace_recorder.app.analysis.pose_estimation_results_writer")
+logger = logging.getLogger("grimace_box."+__name__)
 
 
 class PoseEstimationResultWriter(QueueProcess):
