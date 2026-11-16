@@ -1,0 +1,63 @@
+THIRD-PARTY SOFTWARE NOTICES FOR GrimAce
+
+GrimAce is Copyright (C) 2024-2026 ETH Zurich, Marcel Schmutz, and is licensed
+under the GNU Affero General Public License v3.0 or later (see ../LICENSE and
+../NOTICE). It depends on third-party software. Binary distributions of GrimAce
+(built with PyInstaller) bundle this software, and each component remains under
+its own license.
+
+
+1. PYTHON PACKAGES
+
+The license files of all bundled Python packages are included in the binary
+distribution, in each package's metadata folder:
+
+    _internal/<package>-<version>.dist-info/
+
+depending on the package, as LICENSE, LICENSE.txt, COPYING, NOTICE or inside a
+licenses/ subfolder. Among others, this covers:
+
+- Ultralytics YOLO (AGPL-3.0)
+- PyTorch, torchvision (BSD-3-Clause; torch also includes a NOTICE file)
+- timm (Apache-2.0)
+- NumPy (BSD-3-Clause, including bundled OpenBLAS)
+- OpenCV / opencv-python (MIT packaging, Apache-2.0 OpenCV binary, plus
+  bundled third-party components including FFmpeg under LGPL-2.1, see
+  LICENSE-3RD-PARTY.txt)
+- PyYAML (MIT)
+- all of their dependencies (matplotlib, scipy, Pillow, polars, requests,
+  huggingface_hub, ...)
+
+Packages under the Mozilla Public License 2.0 (certifi, parts of tqdm) are
+included unmodified. Their source code is available from
+https://pypi.org/project/certifi/ and https://pypi.org/project/tqdm/.
+
+
+2. COMPONENTS WITH NOTICES IN THIS FOLDER
+
+- PySide6 / shiboken6 (Qt for Python) - LGPL-3.0.
+  The license file in their package metadata applies only to commercial Qt
+  licensees and does not apply to GrimAce. See PYSIDE6_NOTICE, lgpl-3.0.txt and
+  gpl-3.0.txt.
+- pypylon - BSD-3-Clause for the Python wrapper (see its package metadata).
+  The pypylon package bundles the proprietary Basler pylon runtime libraries
+  (PylonBase, GenICam/GenApi, transport layers, etc.), which are Copyright
+  Basler AG and its licensors and are licensed under the Basler pylon
+  End-User License Agreement. See PYLON_EULA.txt. The pylon runtime may only
+  be used to operate Basler camera products. Basler AG, its affiliates and
+  suppliers are excluded from all liability for costs, losses, damages or
+  obligations resulting from the use and distribution of GrimAce.
+- NVIDIA CUDA runtime libraries (cuBLAS, cuDNN, cuFFT, cuRAND, cuSOLVER,
+  cuSPARSE, NVRTC, nvJitLink, CUDA runtime) - proprietary, bundled with the
+  CUDA build of PyTorch. See NVIDIA_CUDA_NOTICE.
+- nvidia-ml-py (pynvml) - BSD-3-Clause. Its package does not ship a license
+  file. See NVIDIA_ML_PY_LICENSE.txt.
+- CPython 3.11 - Python Software Foundation License, including the bundled
+  Tcl/Tk, OpenSSL, libffi, SQLite, bzip2, xz and zlib components and the
+  conditions for redistributing the Microsoft Visual C++ runtime.
+  See PYTHON_LICENSE.txt.
+
+
+PyInstaller is used only to build the distribution. Its bootloader is under
+GPL-2.0 with an exception that allows distributing the resulting program under
+any license.

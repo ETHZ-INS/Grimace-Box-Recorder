@@ -1,0 +1,17 @@
+tl
+tr
+bl
+br
+nose
+headcentre
+neck
+earl
+earr
+bodycentre
+bcl
+bcr
+hipl
+hipr
+tailbase
+tailcentre
+tailtip

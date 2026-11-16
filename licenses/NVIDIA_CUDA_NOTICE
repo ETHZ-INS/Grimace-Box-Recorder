@@ -1,0 +1,23 @@
+NVIDIA CUDA RUNTIME LIBRARIES
+
+The CUDA-enabled build of PyTorch included in GrimAce binary distributions
+contains NVIDIA runtime libraries (for example cudart, cuBLAS, cuBLASLt, cuDNN,
+cuFFT, cuRAND, cuSOLVER, cuSPARSE, NVRTC, nvJitLink and NVTX, located in
+_internal/torch/lib).
+
+These libraries are Copyright (C) NVIDIA Corporation and its affiliates. All
+rights reserved. They are proprietary, they are NOT covered by the GNU Affero
+General Public License, and they are redistributed under the following
+licenses:
+
+  - NVIDIA CUDA Toolkit End User License Agreement
+    https://docs.nvidia.com/cuda/eula/index.html
+  - NVIDIA cuDNN Software License Agreement
+    https://docs.nvidia.com/deeplearning/cudnn/latest/reference/eula.html
+
+You may use these libraries only together with GrimAce/PyTorch. You may not
+reverse engineer, decompile or disassemble them, except as permitted by
+applicable law, or redistribute them separately.
+
+For a build without NVIDIA components, install the CPU-only PyTorch packages
+before building.

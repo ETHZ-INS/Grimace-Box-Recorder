@@ -1,0 +1,137 @@
+name: Build Executable
+
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.event.release.tag_name || github.ref_name }}
+
+jobs:
+  build:
+    name: Build (Windows)
+    # pypylon, the camera configuration and the build script are Windows-only.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true  # model weights (*.pt) are stored in Git LFS
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      # Installs the exact versions from uv.lock (including the CUDA build of
+      # PyTorch, see pyproject.toml) and the Python version from .python-version.
+      # --locked fails the build if uv.lock is out of date with pyproject.toml.
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # Uses the same script as local builds, so the bundled data files and
+      # license metadata (--recursive-copy-metadata) are defined in one place.
+      - name: Build executable
+        shell: cmd
+        run: uv run --locked cmd /c build_application.bat
+
+      - name: Verify license files are bundled
+        shell: pwsh
+        run: |
+          $internal = "dist/GrimAce/_internal"
+          foreach ($f in "LICENSE", "NOTICE", "licenses/THIRD_PARTY_NOTICE", "licenses/PYLON_EULA.txt") {
+            if (-not (Test-Path "$internal/$f")) { throw "Missing $f in build" }
+          }
+          $count = (Get-ChildItem "$internal" -Directory -Filter "*.dist-info").Count
+          Write-Host "$count package metadata folders bundled"
+          if ($count -lt 50) { throw "Expected package metadata (licenses) for all dependencies, found only $count" }
+
+      - name: Zip build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory release | Out-Null
+          7z a -tzip "release/GrimAce-$env:VERSION-windows.zip" ./dist/GrimAce
+          if ($LASTEXITCODE -ne 0) { throw "7z failed" }
+
+      # GitHub release assets must be smaller than 2 GiB. A larger zip is cut
+      # into plain byte chunks (.001, .002, ...). Joined with `copy /b`, they
+      # form a normal zip again that Windows Explorer can extract, and 7-Zip
+      # can open the .001 part directly.
+      - name: Split zip for release
+        id: split
+        shell: pwsh
+        run: |
+          $zip = Get-Item "release/GrimAce-*.zip"
+          $chunk = 1900MB
+          if ($zip.Length -le $chunk) {
+            "parts=$($zip.Name)" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $in = [IO.File]::OpenRead($zip.FullName)
+          $buffer = New-Object byte[] (16MB)
+          $names = @()
+          try {
+            for ($i = 1; $in.Position -lt $in.Length; $i++) {
+              $name = "{0}.{1:D3}" -f $zip.Name, $i
+              $out = [IO.File]::Create((Join-Path $zip.DirectoryName $name))
+              try {
+                $written = 0
+                while ($written -lt $chunk -and ($n = $in.Read($buffer, 0, [math]::Min($buffer.Length, $chunk - $written))) -gt 0) {
+                  $out.Write($buffer, 0, $n); $written += $n
+                }
+              } finally { $out.Close() }
+              $names += $name
+            }
+          } finally { $in.Close() }
+          Remove-Item $zip.FullName
+          Get-ChildItem $zip.DirectoryName | ForEach-Object { "{0}  {1:N2} GB" -f $_.Name, ($_.Length / 1GB) }
+          "parts=$($names -join ' ')" >> $env:GITHUB_OUTPUT
+          "zipname=$($zip.Name)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GrimAce-windows
+          path: release/*
+          compression-level: 0  # already zipped
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        shell: pwsh
+        working-directory: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+          PARTS: ${{ steps.split.outputs.parts }}
+          ZIPNAME: ${{ steps.split.outputs.zipname }}
+        run: |
+          gh release upload $env:TAG ($env:PARTS -split ' ') --clobber
+          if (-not $env:ZIPNAME) { exit 0 }
+
+          # Split download: append instructions for joining the parts to the release notes.
+          $parts = $env:PARTS -split ' '
+          $body = gh release view $env:TAG --json body --jq .body
+          if ($body -match '## Download \(Windows\)') { exit 0 }  # workflow re-run
+          $notes = @"
+          $body
+
+          ## Download (Windows)
+
+          The application is split into $($parts.Count) parts because of GitHub's file size limit. Download all of them:
+          $(($parts | ForEach-Object { "- ``$_``" }) -join "`n")
+
+          **With 7-Zip:** open ``$($parts[0])`` and extract it.
+
+          **Without additional software:** put all parts in one folder, open a Command Prompt (``cmd``) in that folder and run:
+
+          ``````
+          copy /b $($parts -join ' + ') $env:ZIPNAME
+          ``````
+
+          Then extract ``$env:ZIPNAME`` as usual (right-click > Extract All) and start ``GrimAce\GrimAce.exe``.
+          "@
+          Set-Content -Path (Join-Path $PWD notes.md) -Value $notes -Encoding utf8
+          gh release edit $env:TAG --notes-file notes.md

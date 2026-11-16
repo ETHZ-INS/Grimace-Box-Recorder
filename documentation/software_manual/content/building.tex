@@ -14,8 +14,14 @@ To deploy the application to a client system, it needs to be compiled to an exec
 This is done using \verb!pyinstaller!, which packs the python code together with all
 required libraries and a Python interpreter inside an executable file.
 
-To create the executable, you can run the \verb!build_application.bat! batch script.
-A folder called ``\verb!dist/Grimace Box!'' is created, which contains the executable file as well as a
-folder called \verb!_internal!, containing the python interpreter, libraries and additional files.
+The Python dependencies are managed with \verb!uv!.
+Run \verb!uv sync! in the project folder to install the exact dependency versions from \verb!uv.lock!
+into the \verb!.venv! folder.
+
+To create the executable, run \verb!uv run cmd /c build_application.bat!.
+A folder called \verb!dist/GrimAce! is created, which contains the executable file as well as a
+folder called \verb!_internal!, containing the python interpreter, libraries, license files and additional files.
 The executable file only works if it is in the same location as the \verb!_internal! folder.
-If you want to move the executable file, you need to move the entire ``\verb!Grimace Box!'' folder.
+If you want to move the executable file, you need to move the entire \verb!GrimAce! folder.
+
+Releases are also built automatically by a GitHub Actions workflow when a release is published on GitHub.

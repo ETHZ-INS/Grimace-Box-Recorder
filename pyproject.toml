@@ -1,0 +1,48 @@
+[project]
+name = "grimaceboxrecorder"
+version = "0.2.0"
+description = "Recording, pose tracking and automated grimace scoring for the Grimace Box"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE", "licenses/**/*"]
+authors = [{ name = "Marcel Schmutz" }]
+
+# Compatible version ranges. The exact versions used for builds are pinned in
+# uv.lock (update with `uv lock --upgrade`).
+dependencies = [
+    "torch>=2.2.0",
+    "torchvision>=0.17.0",
+    "PySide6>=6.4.0",
+    "opencv-python>=4.7.0",
+    "numpy>=1.23.0",
+    "timm>=0.9.0",
+    "ultralytics>=8.0.0",
+    "pypylon>=3.0.0",
+    "PyYAML>=6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.0.0",
+]
+
+[tool.uv]
+# The application and its build are Windows-only.
+environments = ["sys_platform == 'win32'"]
+
+# PyTorch with CUDA 13.0. For a CPU-only build (smaller, no NVIDIA libraries),
+# point the sources below to the "pytorch-cpu" index and run `uv lock`.
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
