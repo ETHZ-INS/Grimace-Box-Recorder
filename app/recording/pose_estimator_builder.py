@@ -6,6 +6,7 @@ from typing import List
 
 from ultralytics import YOLO
 
+from grimace.no_pose_model import NoPoseModel
 from grimace.pose_model import PoseModel
 from util.trace import Trace
 
@@ -20,7 +21,7 @@ demo_model_files = {
 }
 
 real_model_files = {
-    "top_pose_estimator": models_folder / "top_pose_estimator_l.pt",
+    "top_pose_estimator": models_folder / "top_pose_estimator.pt",
     "top_pose_keypoints": models_folder / "top_pose_keypoints.txt",
 }
 
@@ -52,6 +53,9 @@ class PoseEstimatorBuilder:
             raise ValueError("model_files is not set")
         if self.pose_estimation_device is None:
             raise ValueError("frame_quality_device is not set")
+
+        if self.model_version == "No Pose Estimation":
+            return NoPoseModel()
 
         top_pose_estimator_model_base = YOLO(self.model_files["top_pose_estimator"])
         top_pose_estimator_model_base.to(self.pose_estimation_device)

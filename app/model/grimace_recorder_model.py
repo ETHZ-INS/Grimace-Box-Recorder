@@ -3,7 +3,7 @@ from copy import deepcopy
 from enum import Enum
 
 import numpy as np
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Slot
 
 from app.config.camera import CameraConfig
 from app.config.grimace import GrimaceConfig
@@ -11,6 +11,7 @@ from app.config.pose_top import PoseTopConfig
 from app.config.recording import RecordingConfig
 from app.config.video_files import VideoFilesConfig
 from app.dataflow.qlist import QList
+from app.dataflow.qvariable import QVariable
 from util.trace import Trace
 
 
@@ -331,6 +332,13 @@ class GrimaceRecorderModel(QObject):
         self.top_camera_frame = None
         self.front_camera_frame = None
 
+        # Preview frames are pulled from these variables in the GUI thread, so that the GUI only processes the newest
+        # frame and frames are dropped instead of piling up in the event queue when rendering can't keep up.
+        self.top_preview_frame = QVariable()
+        self.top_preview_frame.value_set.connect(self.on_top_preview_frame)
+        self.front_preview_frame = QVariable()
+        self.front_preview_frame.value_set.connect(self.on_front_preview_frame)
+
         self.overview_text = None
         self.warnings_text = None
 
@@ -360,6 +368,16 @@ class GrimaceRecorderModel(QObject):
     def set_application_closing(self):
         self.application_state = ApplicationState.CLOSING
         self.application_state_signal.emit(self.application_state)
+
+    # No trace because it's called too often
+    @Slot()
+    def on_top_preview_frame(self):
+        self.set_top_camera_frame(self.top_preview_frame.get()[0])
+
+    # No trace because it's called too often
+    @Slot()
+    def on_front_preview_frame(self):
+        self.set_front_camera_frame(self.front_preview_frame.get()[0])
 
     # No trace because it's called too often
     def set_top_camera_frame(self, top_camera_frame):

@@ -15,7 +15,6 @@ from app.recording.recording_context import RecordingContext
 
 import logging
 
-from grimace.camera_identifier import CameraIdentifier
 from util.trace import Trace
 
 logger = logging.getLogger("grimace_box."+__name__)
@@ -86,8 +85,6 @@ class DualCameraRecorder(QThread):
             self.dropped_frames = 0
             self.buffer_fill_level = 0.0
 
-            #self.camera_identifier_scores = []
-
             # TODO: This is a temporary solution
             self.target_fps = 30.0
 
@@ -131,10 +128,8 @@ class DualCameraRecorder(QThread):
             self.source.close()
 
     @Trace.trace(logger)
-    def __init__(self):#, camera_identifier: CameraIdentifier):
+    def __init__(self):
         super(DualCameraRecorder, self).__init__()
-
-        #self.camera_identifier = camera_identifier
 
         self.top_camera: Optional[DualCameraRecorder.Camera] = None
         self.front_camera: Optional[DualCameraRecorder.Camera] = None
@@ -178,10 +173,6 @@ class DualCameraRecorder(QThread):
     def handle_frame(self, camera: Camera, frame: np.ndarray, timestamp: float):
         if camera.timestamp_offset is None:
             camera.set_timestamp_offset(timestamp)
-
-        ## TODO: This is a temporary solution
-        #if len(camera.camera_identifier_scores) < 10 and camera.frame_index % 30 == 0:
-        #    camera.camera_identifier_scores.append(self.camera_identifier.score(frame))
 
         normalized_timestamp = timestamp - camera.timestamp_offset
 
@@ -316,16 +307,6 @@ class DualCameraRecorder(QThread):
             if camera.dropped_frames > 0:
                 warning = f"{name.capitalize()} camera dropped {camera.dropped_frames} frames"
             report["warnings"][f"{name}_camera_dropped_frames"] = warning
-
-        #if top_camera is not None and front_camera is not None:
-        #    top_mean_identifier = np.mean(top_camera.camera_identifier_scores)
-        #    front_mean_identifier = np.mean(front_camera.camera_identifier_scores)
-        #    warning = None
-        #    # The camera identifier score should be close to 1 for the front camera and close to 0 for the top camera
-        #    # If the mean identifier score is higher for the top camera, the cameras are likely switched
-        #    if top_mean_identifier > front_mean_identifier:
-        #        warning = "Top and front camera are likely switched. Make sure you have selected the correct devices"
-        #    report["warnings"]["cameras_switched"] = warning
 
         return report
 

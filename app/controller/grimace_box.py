@@ -7,6 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Tuple
 
+import cv2
 import numpy as np
 from PySide6 import QtCore
 from PySide6.QtGui import QPixmap, QImage, QShortcut, QKeySequence
@@ -23,7 +24,7 @@ from app.controller.grimace_results_widget import GrimaceResults
 from app.model.grimace_recorder_model import GrimaceRecorderModel, RecordingState, MessageBoxState, ProgressDialogState, \
     ApplicationState
 from app.model.overview_renderer import OverviewRenderer
-from app.recording.recording_manager_2 import RecordingManager
+from app.recording.recording_manager import RecordingManager
 
 from util.trace import Trace
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QFileDialog, QProgressDialog
@@ -241,16 +242,23 @@ class MainWindow(Ui_WGrimaceBox, QMainWindow):
 
     def _scale_frame(self, frame: np.ndarray, width: int, height: int) -> QPixmap:
         h, w, ch = frame.shape
-        bytes_per_line = ch * w
+
+        # Downscale with OpenCV before converting to a QPixmap, so Qt only has to handle the (much smaller)
+        # displayed image instead of the full camera resolution.
+        # INTER_LINEAR instead of INTER_AREA, because INTER_AREA is several times slower (especially with torch loaded)
+        scale = min(width / w, height / h)
+        target_w = max(1, round(w * scale))
+        target_h = max(1, round(h * scale))
+        frame = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+        frame = np.ascontiguousarray(frame)
+
+        bytes_per_line = ch * target_w
         if ch == 1:
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_Grayscale8)
+            q_img = QImage(frame.data, target_w, target_h, bytes_per_line, QImage.Format.Format_Grayscale8)
         else:
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-        frame = QPixmap.fromImage(q_img)
+            q_img = QImage(frame.data, target_w, target_h, bytes_per_line, QImage.Format.Format_RGB888)
 
-        frame = frame.scaled(width, height, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-
-        return frame
+        return QPixmap.fromImage(q_img)
 
     @Trace.trace(logger)
     def update_video_label_size(self):

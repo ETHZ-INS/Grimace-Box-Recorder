@@ -109,7 +109,7 @@ GevStreamChannelSelector	StreamChannel0
 GevSCPSPacketSize	1500
 GevStreamChannelSelector	StreamChannel0
 GevStreamChannelSelector	StreamChannel0
-GevSCPD	1000
+GevSCPD	1900
 GevStreamChannelSelector	StreamChannel0
 GevStreamChannelSelector	StreamChannel0
 GevSCFTD	0

@@ -8,7 +8,6 @@ from app.analysis.top_pose_estimator_v1 import TopPoseEstimatorV1
 from app.dataflow.qqueue import IQueue
 from app.dataflow.queue_forker import QueueForker
 from app.dataflow.queue_pacer import QueuePacer
-from app.recording.FPSRenderer import FPSRenderer
 from app.recording.video_pipeline import VideoPipeline
 from app.recording.video_writer import BufferVideoWriter
 from grimace.pose_model import PoseModel
@@ -98,7 +97,7 @@ class TopVideoPipelineBuilder:
         if preview:
             analysis_services = []
             if self.pose_preview_enabled:
-                preview_queue = PoseRenderer(FPSRenderer(self.preview_queue))
+                preview_queue = PoseRenderer(self.preview_queue)
 
                 pacer = self.build_pacer(preview_queue)
                 analysis_services.append(pacer)
@@ -109,8 +108,7 @@ class TopVideoPipelineBuilder:
 
                 camera_queue = pose_estimator.queue
             else:
-                preview_queue = FPSRenderer(self.preview_queue)
-                camera_queue = preview_queue
+                camera_queue = self.preview_queue
             return VideoPipeline([], analysis_services, camera_queue)
 
         if self.video_writer is None:
@@ -125,7 +123,7 @@ class TopVideoPipelineBuilder:
         analysis_services.append(pose_results_writer)
 
         if self.pose_preview_enabled:
-            preview_queue = PoseRenderer(FPSRenderer(self.preview_queue))
+            preview_queue = PoseRenderer(self.preview_queue)
 
             pacer = self.build_pacer(preview_queue)
             analysis_services.append(pacer)
@@ -136,14 +134,12 @@ class TopVideoPipelineBuilder:
             analysis_services.append(pose_estimator)
             camera_queue = QueueForker([self.video_writer.queue, pose_estimator.queue])
         else:
-            preview_queue = FPSRenderer(self.preview_queue)
-
             pose_output_queue = QueueForker([pose_results_writer.queue])
 
             pose_estimator = self.build_pose_estimator(pose_output_queue, batch_size=4)
 
             analysis_services.append(pose_estimator)
-            camera_queue = QueueForker([self.video_writer.queue, pose_estimator.queue, preview_queue])
+            camera_queue = QueueForker([self.video_writer.queue, pose_estimator.queue, self.preview_queue])
 
         return VideoPipeline(core_services, analysis_services, camera_queue)
 

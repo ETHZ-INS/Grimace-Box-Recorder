@@ -9,4 +9,4 @@ class RecordingConfig:
     codec: str = "FMP4"
 
     MODES = ["Manual", "Timed"]
-    CODECS = ["FMP4", "FFV1", "H264"]
+    CODECS = ["FMP4", "FFV1"]
