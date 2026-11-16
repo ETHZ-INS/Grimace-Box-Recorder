@@ -40,3 +40,37 @@ The model weights are currently not included in the GitHub repository because th
 
 
 ## Application
+
+## Python Dependencies
+
+Dependencies are managed with [uv](https://docs.astral.sh/uv/). `pyproject.toml` lists the compatible
+version ranges, and `uv.lock` pins the exact versions used for builds.
+
+Install the exact locked versions (including Python 3.11 and the CUDA 13.0 build of PyTorch) into `.venv`:
+
+```powershell
+uv sync
+```
+
+Run the application with `uv run main.py`, and build it with `uv run cmd /c build_application.bat`.
+
+- **Update dependencies:** `uv lock --upgrade` (or `uv lock --upgrade-package <name>`), then `uv sync`.
+  Test the application and commit the updated `uv.lock`.
+- **Add a dependency:** `uv add <package>`. If it ends up in the build, also add it to the
+  `--recursive-copy-metadata` list in `build_application.bat` so its license is bundled.
+- **CPU-only PyTorch:** in `pyproject.toml`, change the `[tool.uv.sources]` entries for torch and
+  torchvision to `index = "pytorch-cpu"`, then run `uv lock` and `uv sync`.
+
+## License
+
+©2024-2026 ETH Zurich, Marcel Schmutz
+
+GrimAce is free software, licensed under the [GNU Affero General Public License v3.0 or later](LICENSE).
+It comes with an additional permission (AGPL section 7) to combine it with the proprietary Basler pylon
+and NVIDIA CUDA runtime libraries; see [NOTICE](NOTICE).
+
+The Ultralytics-based model weights (`face_cropper.pt`, `top_pose_estimator.pt` and their mock versions)
+are also AGPL-3.0. Third-party components and their licenses are listed in
+[licenses/THIRD_PARTY_NOTICE](licenses/THIRD_PARTY_NOTICE). The build script copies `LICENSE`, `NOTICE`
+and the `licenses/` folder into every binary distribution. Keep them there when you redistribute the
+application.

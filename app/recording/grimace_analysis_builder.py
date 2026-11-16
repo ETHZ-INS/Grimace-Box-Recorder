@@ -20,9 +20,9 @@ bundle_dir = getattr(sys, '_MEIPASS', os.getcwd())
 models_folder = Path(os.path.abspath(os.path.join(bundle_dir, 'models')))
 
 demo_model_files = {
-    "frame_quality": models_folder / "mock_frame_quality_v2.pt",
-    "face_cropper": models_folder / "mock_face_cropper_v2.pt",
-    "grimace_scorer": models_folder / "mock_grimace_scorer_v2.pt",
+    "frame_quality": models_folder / "mock_frame_quality.pt",
+    "face_cropper": models_folder / "mock_face_cropper.pt",
+    "grimace_scorer": models_folder / "mock_grimace_scorer.pt",
 }
 
 real_model_files = {

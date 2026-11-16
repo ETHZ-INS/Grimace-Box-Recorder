@@ -1,0 +1,23 @@
+GrimAce uses PySide6 and shiboken6 (Qt for Python), together with the Qt
+libraries they include. GrimAce uses them under the GNU Lesser General Public
+License version 3 (LGPL-3.0).
+
+PySide6, shiboken6 and Qt are Copyright (C) The Qt Company Ltd. and/or its
+subsidiaries and other contributors.
+
+The LGPL-3.0 builds on the GNU General Public License version 3 (GPLv3).
+Copies of both licenses are provided in this folder (lgpl-3.0.txt and
+gpl-3.0.txt), as LGPL-3.0 requires.
+
+In binary distributions of GrimAce, the Qt and PySide6 libraries are kept as
+separate, unmodified shared libraries (in _internal/PySide6 and
+_internal/shiboken6). You may replace them with a compatible version of your
+own.
+
+Source code for PySide6 and shiboken6:
+  https://code.qt.io/cgit/pyside/pyside-setup.git/
+  https://pypi.org/project/PySide6/ (source distribution)
+Source code for Qt:
+  https://code.qt.io/cgit/qt/
+Third-party components bundled with Qt and their licenses:
+  https://doc.qt.io/qt-6/licenses-used-in-qt.html

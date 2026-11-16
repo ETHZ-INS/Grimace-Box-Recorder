@@ -8,4 +8,4 @@ class PoseTopConfig:
     pose_model: Optional[str] = "V1 - GrimaceBoxTop"
     pose_device: str = "cuda:0"
 
-    POSE_TOP_MODELS = ["V1 - GrimaceBoxTop", "Demo (Fake Mouse)"]
+    POSE_TOP_MODELS = ["No Pose Estimation", "V1 - GrimaceBoxTop", "Demo (Fake Mouse)"]

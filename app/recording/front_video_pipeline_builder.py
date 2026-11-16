@@ -6,7 +6,6 @@ from app.analysis.grimace_analyzer_v1 import GrimaceAnalyzerV1
 from app.analysis.grimace_results_writer import GrimaceResultWriter
 from app.dataflow.qqueue import IQueue, QQueue
 from app.dataflow.queue_forker import QueueForker
-from app.recording.FPSRenderer import FPSRenderer
 from app.recording.video_pipeline import VideoPipeline
 from app.recording.video_writer import BufferVideoWriter
 from grimace.frame_cropper import FrameCropper
@@ -113,8 +112,6 @@ class FrontVideoPipelineBuilder:
         core_services = []
         analysis_services = []
 
-        preview_queue = FPSRenderer(self.preview_queue)
-
         core_services.append(self.video_writer)
 
         grimace_results_writer = self.build_grimace_results_writer()
@@ -125,7 +122,7 @@ class FrontVideoPipelineBuilder:
         grimace_scorer_service = self.build_grimace_analyzer_service(grimace_output_queue)
         analysis_services.append(grimace_scorer_service)
 
-        camera_queue = QueueForker([self.video_writer.queue, grimace_scorer_service.queue, preview_queue])
+        camera_queue = QueueForker([self.video_writer.queue, grimace_scorer_service.queue, self.preview_queue])
 
         return VideoPipeline(core_services, analysis_services, camera_queue)
 
