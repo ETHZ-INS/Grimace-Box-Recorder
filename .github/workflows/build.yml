@@ -38,6 +38,12 @@ jobs:
         shell: cmd
         run: uv run --locked cmd /c build_application.bat
 
+      # Fails if anything was installed or changed in the environment during the
+      # build (e.g. by a package auto-installing its optional dependencies), since
+      # the bundle would then contain packages that are not pinned in uv.lock.
+      - name: Verify build environment matches uv.lock
+        run: uv sync --locked --check
+
       - name: Verify license files are bundled
         shell: pwsh
         run: |
