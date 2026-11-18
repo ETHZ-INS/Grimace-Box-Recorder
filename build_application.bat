@@ -1,3 +1,8 @@
+@rem Prevent Ultralytics from installing missing optional packages (e.g. lap for
+@rem tracking) while PyInstaller analyzes it. They are not needed, and packages
+@rem installed mid-build would be bundled without being pinned in uv.lock.
+set YOLO_AUTOINSTALL=false
+
 pyinstaller^
  --add-data "LICENSE;."^
  --add-data "NOTICE;."^
