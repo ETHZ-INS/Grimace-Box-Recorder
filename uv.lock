@@ -253,7 +253,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "timm", specifier = ">=0.9.0" },
     { name = "torch", specifier = ">=2.2.0", index = "https://download.pytorch.org/whl/cu130" },
-    { name = "torchvision", specifier = ">=0.17.0", index = "https://download.pytorch.org/whl/cu130" },
+    { name = "torchvision", specifier = "<0.29", index = "https://download.pytorch.org/whl/cu130" },
     { name = "ultralytics", specifier = ">=8.0.0" },
 ]
 
@@ -921,7 +921,7 @@ wheels = [
 
 [[package]]
 name = "torch"
-version = "2.14.1+cu130"
+version = "2.13.0+cu130"
 source = { registry = "https://download.pytorch.org/whl/cu130" }
 dependencies = [
     { name = "filelock", marker = "sys_platform == 'win32'" },
@@ -934,18 +934,16 @@ dependencies = [
     { name = "typing-extensions", marker = "sys_platform == 'win32'" },
 ]
 wheels = [
-    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.14.1%2Bcu130-cp311-cp311-win_amd64.whl", hash = "sha256:e98711737150b5a6451cbbfdb425abd5d1bea77f4a1a5d29c48d5ec41cd54949", upload-time = "2026-09-30T20:22:28Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.14.1%2Bcu130-cp312-cp312-win_amd64.whl", hash = "sha256:0a09031e93632d14ef49553acd6211ece3ae9cdc0969a369b8c24e3cc4d15be9", upload-time = "2026-09-30T20:25:17Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.14.1%2Bcu130-cp313-cp313-win_amd64.whl", hash = "sha256:f064c797bb497daf2b2b5e32b6d794abef087e3f24e758e6c6f8010bd2698319", upload-time = "2026-09-30T20:27:54Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.14.1%2Bcu130-cp314-cp314-win_amd64.whl", hash = "sha256:e25757e423be3c107a36d7495fa5aeb021b9ab506457cd7c7e068505f0283ae0", upload-time = "2026-09-30T20:30:23Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.14.1%2Bcu130-cp314-cp314t-win_amd64.whl", hash = "sha256:70b0704f5dad3d3680e4fdea49bf535ccc75d11f11bbb7c52c93d40ca02ed85d", upload-time = "2026-09-30T20:33:13Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.14.1%2Bcu130-cp315-cp315-win_amd64.whl", hash = "sha256:a2c434318e3c84b52a7ed72c868b0d4930f9ddffb9b1eb97b32137f2a61ab075", upload-time = "2026-09-30T20:35:56Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.14.1%2Bcu130-cp315-cp315t-win_amd64.whl", hash = "sha256:a4f38677af2606e23bc85b166a08224b207445895873cfe2dd0c50c1300ec2d2", upload-time = "2026-09-30T20:38:30Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.13.0%2Bcu130-cp311-cp311-win_amd64.whl", hash = "sha256:45e97bd9bc0416f4f4190b5098c55119a389fa5a7c8bbf2639f08f1d04e0a0dc", upload-time = "2026-07-08T20:22:42Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.13.0%2Bcu130-cp312-cp312-win_amd64.whl", hash = "sha256:2efab1e83604ca628c6d85b9e188c153690980498d1297081a9dad704919303c", upload-time = "2026-07-08T20:26:27Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.13.0%2Bcu130-cp313-cp313-win_amd64.whl", upload-time = "2026-07-08T11:19:21Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.13.0%2Bcu130-cp314-cp314-win_amd64.whl", upload-time = "2026-07-08T11:19:40Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torch-2.13.0%2Bcu130-cp314-cp314t-win_amd64.whl", upload-time = "2026-07-08T11:19:51Z" },
 ]
 
 [[package]]
 name = "torchvision"
-version = "0.29.1+cu130"
+version = "0.28.0+cu130"
 source = { registry = "https://download.pytorch.org/whl/cu130" }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' and sys_platform == 'win32'" },
@@ -954,13 +952,11 @@ dependencies = [
     { name = "torch", marker = "sys_platform == 'win32'" },
 ]
 wheels = [
-    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.29.1%2Bcu130-cp311-cp311-win_amd64.whl", hash = "sha256:08f02295d26ccb2054cafc8c21feacf9022384d5a0cd006fbbf1d59623af7522", upload-time = "2026-09-30T15:46:27Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.29.1%2Bcu130-cp312-cp312-win_amd64.whl", hash = "sha256:14d3195e5e657fef46d08de0d3470da03a983fa383d8aa279e36e47e95d991c6", upload-time = "2026-09-30T15:46:27Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.29.1%2Bcu130-cp313-cp313-win_amd64.whl", hash = "sha256:8c3f9aea88ab9d28be63d8bc09103d49dccfae26965d8a94c99522417b8c8db1", upload-time = "2026-09-30T15:46:27Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.29.1%2Bcu130-cp314-cp314-win_amd64.whl", hash = "sha256:cfaecff5634e92989938b3da084e3f624d5ce8179446f42abf50c425cadd8a63", upload-time = "2026-09-30T15:46:27Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.29.1%2Bcu130-cp314-cp314t-win_amd64.whl", hash = "sha256:17a28fce88a4807c395a6ad8676c7074ae8f01c6dc269739af592dbd66229a74", upload-time = "2026-09-30T15:46:27Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.29.1%2Bcu130-cp315-cp315-win_amd64.whl", hash = "sha256:dc329416b4abdc8bd6eb23977614f4dd9ca813e71645bd474d840c324d5a3bbc", upload-time = "2026-09-30T15:46:28Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.29.1%2Bcu130-cp315-cp315t-win_amd64.whl", hash = "sha256:b04498d9ea9dbd25cad4447ff638b0fb6719817c0997987a55f4bdef71043b66", upload-time = "2026-09-30T15:46:28Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.28.0%2Bcu130-cp311-cp311-win_amd64.whl", upload-time = "2026-07-08T12:26:51Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.28.0%2Bcu130-cp312-cp312-win_amd64.whl", upload-time = "2026-07-08T12:26:52Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.28.0%2Bcu130-cp313-cp313-win_amd64.whl", upload-time = "2026-07-08T12:26:52Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.28.0%2Bcu130-cp314-cp314-win_amd64.whl", upload-time = "2026-07-08T12:26:52Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu130/torchvision-0.28.0%2Bcu130-cp314-cp314t-win_amd64.whl", upload-time = "2026-07-08T12:26:52Z" },
 ]
 
 [[package]]
