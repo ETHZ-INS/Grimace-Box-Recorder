@@ -18,7 +18,9 @@ dependencies = [
     "numpy>=1.23.0",
     "timm>=0.9.0",
     "ultralytics>=8.0.0",
-    "pypylon>=3.0.0",
+    # pypylon 26.10 (pylon runtime 12.5.2, new GigE transport layer) makes the GigE
+    # cameras and the whole app lag. Test camera performance before raising this pin.
+    "pypylon>=3.0.0,<26.6",
     "PyYAML>=6.0",
 ]
 
