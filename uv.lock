@@ -248,7 +248,7 @@ dev = [
 requires-dist = [
     { name = "numpy", specifier = ">=1.23.0" },
     { name = "opencv-python", specifier = ">=4.7.0" },
-    { name = "pypylon", specifier = ">=3.0.0" },
+    { name = "pypylon", specifier = ">=3.0.0,<26.6" },
     { name = "pyside6", specifier = ">=6.4.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "timm", specifier = ">=0.9.0" },
@@ -737,10 +737,10 @@ wheels = [
 
 [[package]]
 name = "pypylon"
-version = "26.10"
+version = "26.5.0"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9a/60/9dd7318186f9409fa1d01ba681c9de7a77a49683584f4a26ee812d03544a/pypylon-26.10-cp39-abi3-win_amd64.whl", hash = "sha256:f1edbb96dc34634e98240fbd1904917be79eec99ef8d8f28dadd6f7ff98be403", size = 111045787, upload-time = "2026-11-06T16:34:55.245Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/07/cca0ee176517dee1f9bbc9d2545e406cd26d75efa068c6534caa996f0ea8/pypylon-26.5.0-cp39-abi3-win_amd64.whl", hash = "sha256:12fb02782264215e147af283a094fa8c024b2717f9044e4c10d612e2a61ae141", size = 110329911, upload-time = "2026-05-26T15:26:09.283Z" },
 ]
 
 [[package]]
